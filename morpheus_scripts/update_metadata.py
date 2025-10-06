@@ -2,14 +2,37 @@ import os
 import json
 import socket
 
-# Recupera hostname
-hostname = socket.gethostname()
 
-# Recupera ipv4 (prima interfaccia non localhost)
+# Prova a leggere l'hostname dell'host se disponibile
+def get_host_hostname():
+    host_hostname_path = '/host/etc/hostname'
+    try:
+        with open(host_hostname_path, 'r') as f:
+            return f.read().strip()
+    except Exception:
+        return None
+
+hostname = get_host_hostname() or socket.gethostname()
+
+
+# Prova a leggere l'IP dell'host da /host/etc/hosts (se montato)
+def get_host_ipv4():
+    hosts_path = '/host/etc/hosts'
+    try:
+        with open(hosts_path, 'r') as f:
+            lines = f.readlines()
+            for line in lines:
+                if hostname in line and not line.startswith('127.'):
+                    parts = line.split()
+                    if parts:
+                        return parts[0]
+    except Exception:
+        pass
+    return None
+
 def get_ipv4():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
-        # Connessione fittizia per ottenere l'IP locale
         s.connect(('8.8.8.8', 80))
         ip = s.getsockname()[0]
     except Exception:
@@ -18,7 +41,7 @@ def get_ipv4():
         s.close()
     return ip
 
-ipv4 = get_ipv4()
+ipv4 = get_host_ipv4() or get_ipv4()
 
 
 # Costruisci l'URL come richiesto: hostname + '.easyfattincloud.it'
