@@ -69,7 +69,7 @@ def resolve_parameters():
     """Determina i parametri da usare, da variabili d'ambiente o CLI"""
     instance_id = os.environ.get('MORPHEUS_INSTANCE_ID')
     api_url = os.environ.get('MORPHEUS_API_URL')
-    token = os.environ.get('MORPHEUS_API_TOKEN')
+    token = os.environ.get('MORPHEUS_API_TOKEN') or os.environ.get('MORPHEUS_API_ACCESS_TOKEN')
 
     # Se non trovate nelle variabili, prova dagli argomenti CLI
     if not instance_id and len(sys.argv) > 1:
