@@ -1,6 +1,6 @@
 # Autore: g.abbaticchio
-# Revisione: 1.0
-# Data: 06/10/2025
+# Revisione: 1.1
+# Data: 10/10/2025
 # Code: update_instance_metadata
 # Source: Local
 # Result Type: JSON
@@ -16,13 +16,15 @@ import requests
 import os
 import sys
 
+
 def send_morpheus_output(status, message):
-    """Funzione per formattare l'output per Morpheus"""
+    """Formatta l'output per Morpheus"""
     output = {
         "status": status,
         "message": message
     }
-    print(json.dumps(output))
+    print(json.dumps(output, indent=2))
+
 
 def get_instance_details(instance_id, api_url, token):
     """Recupera i dettagli dell'istanza da Morpheus"""
@@ -30,16 +32,14 @@ def get_instance_details(instance_id, api_url, token):
         'Authorization': f'Bearer {token}',
         'Content-Type': 'application/json'
     }
-    
-    response = requests.get(
-        f'{api_url}/api/instances/{instance_id}',
-        headers=headers
-    )
-    
+    url = f'{api_url}/api/instances/{instance_id}'
+
+    response = requests.get(url, headers=headers)
     if response.status_code != 200:
-        raise Exception(f"Errore nel recupero dei dettagli dell'istanza: {response.status_code}")
-        
+        raise Exception(f"Errore nel recupero dei dettagli dell'istanza (HTTP {response.status_code}): {response.text}")
+
     return response.json()
+
 
 def update_instance_metadata(instance_id, custom_options, api_url, token):
     """Aggiorna le customOptions dell'istanza"""
@@ -47,7 +47,7 @@ def update_instance_metadata(instance_id, custom_options, api_url, token):
         'Authorization': f'Bearer {token}',
         'Content-Type': 'application/json'
     }
-    
+
     payload = {
         "instance": {
             "config": {
@@ -55,47 +55,63 @@ def update_instance_metadata(instance_id, custom_options, api_url, token):
             }
         }
     }
-    
-    response = requests.put(
-        f'{api_url}/api/instances/{instance_id}',
-        headers=headers,
-        json=payload
-    )
-    
+
+    url = f'{api_url}/api/instances/{instance_id}'
+    response = requests.put(url, headers=headers, json=payload)
+
     if response.status_code != 200:
-        raise Exception(f"Errore nell'aggiornamento dell'istanza: {response.status_code}")
-        
+        raise Exception(f"Errore nell'aggiornamento dell'istanza (HTTP {response.status_code}): {response.text}")
+
     return response.json()
+
+
+def resolve_parameters():
+    """Determina i parametri da usare, da variabili d'ambiente o CLI"""
+    instance_id = os.environ.get('MORPHEUS_INSTANCE_ID')
+    api_url = os.environ.get('MORPHEUS_API_URL')
+    token = os.environ.get('MORPHEUS_API_TOKEN')
+
+    # Se non trovate nelle variabili, prova dagli argomenti CLI
+    if not instance_id and len(sys.argv) > 1:
+        instance_id = sys.argv[1]
+    if not api_url and len(sys.argv) > 2:
+        api_url = sys.argv[2]
+    if not token and len(sys.argv) > 3:
+        token = sys.argv[3]
+
+    if not all([instance_id, api_url, token]):
+        usage = (
+            "Parametri mancanti.\n\n"
+            "Uso:\n"
+            "  python3 update_instance_metadata.py <instance_id> <api_url> <token>\n\n"
+            "Oppure imposta le variabili d'ambiente:\n"
+            "  export MORPHEUS_INSTANCE_ID=<id>\n"
+            "  export MORPHEUS_API_URL=<url>\n"
+            "  export MORPHEUS_API_TOKEN=<token>\n"
+        )
+        raise Exception(usage)
+
+    return instance_id, api_url, token
+
 
 def main():
     try:
-        # Prova a recuperare le variabili in diversi modi
-        instance_id = os.environ.get('MORPHEUS_INSTANCE_ID', '<%=instance.id%>')
-        api_url = os.environ.get('MORPHEUS_API_URL', '<%=morpheus.apiUrl%>')
-        token = os.environ.get('MORPHEUS_API_TOKEN', '<%=morpheus.apiToken%>')
-        
-        # Rimuovi i template markers se le variabili non sono state sostituite
-        if instance_id.startswith('<%='):
-            instance_id = sys.argv[1] if len(sys.argv) > 1 else None
-        if api_url.startswith('<%='):
-            api_url = sys.argv[2] if len(sys.argv) > 2 else None
-        if token.startswith('<%='):
-            token = sys.argv[3] if len(sys.argv) > 3 else None
-            
-        if not all([instance_id, api_url, token]):
-            raise Exception("Parametri mancanti. Uso: script.py <instance_id> <api_url> <token>")
-            
+        instance_id, api_url, token = resolve_parameters()
+
         # Recupera i dettagli dell'istanza
         instance_details = get_instance_details(instance_id, api_url, token)
-        
-        # Estrae le informazioni necessarie
-        hostname = instance_details['instance']['hostName']
-        ipv4 = instance_details['instance']['connectionInfo'][0]['ip'] if instance_details['instance']['connectionInfo'] else None
+        instance = instance_details.get('instance', {})
+
+        # Estrae le informazioni principali
+        hostname = instance.get('hostName')
+        connection_info = instance.get('connectionInfo', [])
+        ipv4 = connection_info[0].get('ip') if connection_info else None
+
         domain = "easyfattincloud.it"
         url = f"{hostname}.{domain}" if hostname else None
-        
-        # Recupera le customOptions esistenti e aggiunge i nuovi campi
-        current_custom_options = instance_details['instance']['config']['customOptions']
+
+        # Recupera e aggiorna le customOptions
+        current_custom_options = instance.get('config', {}).get('customOptions', {})
         updated_custom_options = {
             **current_custom_options,
             "hostname": hostname,
@@ -103,21 +119,22 @@ def main():
             "domain": domain,
             "url": url
         }
-        
-        # Aggiorna l'istanza con le nuove customOptions
-        result = update_instance_metadata(instance_id, updated_custom_options, api_url, token)
-        
-        # Invia l'output di successo
+
+        # Aggiorna l'istanza su Morpheus
+        update_instance_metadata(instance_id, updated_custom_options, api_url, token)
+
+        # Output finale
         send_morpheus_output("success", {
             "hostname": hostname,
             "ipv4": ipv4,
             "domain": domain,
             "url": url
         })
-        
+
     except Exception as e:
         send_morpheus_output("error", str(e))
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
