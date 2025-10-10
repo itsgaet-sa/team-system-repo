@@ -69,13 +69,21 @@ def update_instance_metadata(instance_id, custom_options, api_url, token):
 
 def main():
     try:
-        # Recupera le variabili d'ambiente di Morpheus
-        instance_id = os.environ.get('MORPHEUS_INSTANCE_ID')
-        api_url = os.environ.get('MORPHEUS_API_URL')
-        token = os.environ.get('MORPHEUS_API_TOKEN')
+        # Prova a recuperare le variabili in diversi modi
+        instance_id = os.environ.get('MORPHEUS_INSTANCE_ID', '<%=instance.id%>')
+        api_url = os.environ.get('MORPHEUS_API_URL', '<%=morpheus.apiUrl%>')
+        token = os.environ.get('MORPHEUS_API_TOKEN', '<%=morpheus.apiToken%>')
         
+        # Rimuovi i template markers se le variabili non sono state sostituite
+        if instance_id.startswith('<%='):
+            instance_id = sys.argv[1] if len(sys.argv) > 1 else None
+        if api_url.startswith('<%='):
+            api_url = sys.argv[2] if len(sys.argv) > 2 else None
+        if token.startswith('<%='):
+            token = sys.argv[3] if len(sys.argv) > 3 else None
+            
         if not all([instance_id, api_url, token]):
-            raise Exception("Variabili d'ambiente Morpheus mancanti")
+            raise Exception("Parametri mancanti. Uso: script.py <instance_id> <api_url> <token>")
             
         # Recupera i dettagli dell'istanza
         instance_details = get_instance_details(instance_id, api_url, token)
