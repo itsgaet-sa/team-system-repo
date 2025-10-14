@@ -31,7 +31,7 @@ def get_instance_details(instance_id, api_url, token):
         'Authorization': f'Bearer {token}',
         'Content-Type': 'application/json'
     }
-    url = f'{api_url}/api/instances/{instance_id}'
+    url = f'https://{api_url}/api/instances/{instance_id}'
 
     response = requests.get(url, headers=headers)
     if response.status_code != 200:
