@@ -117,10 +117,7 @@ def resolve_parameters():
 
 def main():
     try:
-        print("DEBUG Hostname =", morpheus['instance']['hostname'])
-        print("DEBUG InstanceName =", morpheus['instance']['name'])
-        print("DEBUG DomainName =", morpheus['instance']['domainName'])
-        print("DEBUG MD5=", md5_to_base62_short(morpheus['instance']['name']))
+     
 
         # Estrae le informazioni principali
         hostname = morpheus['instance']['hostname'] + md5_short = md5_to_base62_short(morpheus['instance']['name'])
@@ -128,8 +125,8 @@ def main():
         url = f"{hostname}.{domain}" if hostname else None
 
         # Recupera e aggiorna le customOptions
-        #current_custom_options = instance.get('config', {}).get('customOptions', {})
-        #updated_custom_options = {
+        # current_custom_options = instance.get('config', {}).get('customOptions', {})
+        # updated_custom_options = {
         #    **current_custom_options,
         #    "hostname": hostname,
         #    "ipv4": ipv4,
@@ -143,7 +140,6 @@ def main():
         # Output finale
         send_morpheus_output("success", {
             "hostname": hostname,
-            #"ipv4": ipv4,
             "domain": domain,
             "url": url
         })
