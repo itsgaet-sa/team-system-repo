@@ -69,9 +69,6 @@ $shortHash = $base62Val.Substring(0, [Math]::Min(2, $base62Val.Length))
 # Recupera l'hostname corrente
 $currentHostname = $env:COMPUTERNAME
  
-# Crea il nuovo hostname concatenando l'hostname corrente con il codice hash
-$newHostname = "$currentHostname$shortHash"
- 
 # Rileva ipv4
 $ipv4 = (Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where-Object { $_.IPAddress -notlike "169.254.*" } | Select-Object -First 1).IPAddress
 # Se non viene trovato un indirizzo IPv4, usa l'indirizzo di loopback
@@ -79,25 +76,8 @@ if (-not $ipv4) {
     $ipv4 = "127.0.0.1"
 }
  
-# Backup del file hosts
-$hostsFilePath = "C:\Windows\System32\drivers\etc\hosts"
-if (Test-Path $hostsFilePath) {
-    $backupFilePath = "$hostsFilePath.bak"
-    if (-not (Test-Path $backupFilePath)) {
-        Copy-Item -Path $hostsFilePath -Destination $backupFilePath -Force
-    }
-}
  
 # Aggiungi ipv4 con hostname e FQDN completo .cloud.teamsystem.com al file hosts
-$fqdn = "$newHostname.cloud.teamsystem.com"
-$hostsEntry = "$ipv4`t$newHostname`t$fqdn`t# Added by script"
-if (-not (Get-Content $hostsFilePath | Select-String -Pattern $newHostname)) {
-    Add-Content -Path $hostsFilePath -Value $hostsEntry
-}
+$fqdn = "$currentHostname.cloud.teamsystem.com"
  
-# Rinomina il computer (richiede privilegi di amministratore) e riavvia il sistema
-# Rename-Computer -NewName $newHostname -Force -Restart
- 
-Rename-Computer -NewName $newHostname 1>$null 2>$null 3>$null 4>$null 5>$null 6>$null
- 
-Send-MorpheusOutput -Status "Success" -Message "$newHostname"
+Send-MorpheusOutput -Status "Success" -Message "$currentHostname | $ipv4"
