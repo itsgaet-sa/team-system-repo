@@ -14,70 +14,61 @@ $VerbosePreference = 'SilentlyContinue'
 $DebugPreference = 'SilentlyContinue'
 $InformationPreference = 'SilentlyContinue'
 $WarningPreference = 'SilentlyContinue'
- 
-function Send-MorpheusOutput {
-    param (
-        [Parameter(Mandatory = $true)]
-        [string]$Status,
-        
-        [Parameter(Mandatory = $true)]
-        [string]$Message
-        )
-    
-    $output = @{
-        status  = $Status
-        message = $Message
+
+import json
+import socket
+import subprocess
+
+def send_morpheus_output(status, message):
+    """Emette l'output JSON nel formato atteso da Morpheus."""
+    output = {
+        "status": status,
+        "message": message
     }
- 
-    $output | ConvertTo-Json -Depth 10 | Write-Output
-}
- 
-# Imposta il nome univoco della VM (sostituisci con il valore corretto oppure passalo come parametro)
-$instanceName = "<%=instance.name%>"
-if (-not $instanceName) { $instanceName = "ENT002-TT-L-ACME01" }
- 
-# Calcola l'MD5 dell'instance name
-$md5 = [System.Security.Cryptography.MD5]::Create()
-$bytes = [System.Text.Encoding]::UTF8.GetBytes($instanceName)
-$hashBytes = $md5.ComputeHash($bytes)
-$md5.Dispose()
- 
-# Converte l'hash in stringa esadecimale
-$hashHex = [System.BitConverter]::ToString($hashBytes) -replace '-',''
- 
-# Converte la stringa esadecimale in un BigInteger (aggiungendo uno 0 iniziale per evitare problemi di segno)
-$bigInt = [System.Numerics.BigInteger]::Parse("0$hashHex", [System.Globalization.NumberStyles]::HexNumber)
- 
-# Funzione per convertire un BigInteger in Base62
-function ConvertTo-Base62($bigInt) {
-    $chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-    $result = ""
-    while ($bigInt -gt 0) {
-        $remainder = [int]($bigInt % 62)
-        $result = $chars[$remainder] + $result
-        $bigInt = [System.Numerics.BigInteger]::Divide($bigInt, 62)
-    }
-    if ([string]::IsNullOrEmpty($result)) { $result = "0" }
-    return $result
-}
- 
-$base62Val = ConvertTo-Base62 $bigInt
- 
-# Prendi i primi 2 caratteri (se il risultato ha meno di 2 caratteri, prendi l'intera stringa)
-$shortHash = $base62Val.Substring(0, [Math]::Min(2, $base62Val.Length))
- 
-# Recupera l'hostname corrente
-$currentHostname = $env:COMPUTERNAME
- 
-# Rileva ipv4
-$ipv4 = (Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where-Object { $_.IPAddress -notlike "169.254.*" } | Select-Object -First 1).IPAddress
-# Se non viene trovato un indirizzo IPv4, usa l'indirizzo di loopback
-if (-not $ipv4) {
-    $ipv4 = "127.0.0.1"
-}
- 
- 
-# Aggiungi ipv4 con hostname e FQDN completo .cloud.teamsystem.com al file hosts
-$fqdn = "$currentHostname.cloud.teamsystem.com"
- 
-Send-MorpheusOutput -Status "Success" -Message "$currentHostname | $ipv4"
+    print(json.dumps(output, ensure_ascii=False))
+
+
+def get_ipv4_address():
+    """Rileva l'indirizzo IPv4 del sistema (escludendo 169.254.*)."""
+    try:
+        # Ottiene l'indirizzo IP principale (non loopback)
+        ip = socket.gethostbyname(socket.gethostname())
+        if ip.startswith("169.254."):
+            # Fallback su altro metodo se l’IP è link-local
+            ip = None
+    except Exception:
+        ip = None
+
+    if not ip:
+        # Prova con `ipconfig` / `ip addr` (cross-platform fallback)
+        try:
+            result = subprocess.run(
+                ["ipconfig"], capture_output=True, text=True, check=False
+            )
+            for line in result.stdout.splitlines():
+                if "IPv4" in line and "169.254" not in line:
+                    ip = line.split(":")[-1].strip()
+                    break
+        except Exception:
+            pass
+
+    if not ip:
+        ip = "127.0.0.1"
+
+    return ip
+
+
+def main():
+    current_hostname = socket.gethostname()
+    ipv4 = get_ipv4_address()
+    fqdn = f"{current_hostname}.cloud.teamsystem.com"
+
+    # (facoltativo) aggiungere al file hosts
+    # with open(r"C:\Windows\System32\drivers\etc\hosts", "a") as f:
+    #     f.write(f"{ipv4} {fqdn}\n")
+
+    send_morpheus_output("Success", f"{current_hostname} | {ipv4}")
+
+
+if __name__ == "__main__":
+    main()
