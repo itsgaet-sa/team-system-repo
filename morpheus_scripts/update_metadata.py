@@ -95,7 +95,7 @@ def resolve_parameters():
 
 def main():
     try:
-        print("DEBUG MORPHEUS_INSTANCE_ID =", morpheus['instance']['hostname']))
+        print("DEBUG MORPHEUS_INSTANCE_ID =", morpheus['instance']['hostname'])
         print("DEBUG MORPHEUS_API_URL =", os.environ.get("MORPHEUS_API_URL"))
         print("DEBUG MORPHEUS_API_TOKEN =", "SET" if os.environ.get("MORPHEUS_API_TOKEN") else "MISSING")
         
