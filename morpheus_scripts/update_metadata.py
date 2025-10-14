@@ -10,16 +10,15 @@
 # Continue on error: False
 # Retryable: False
 # Description: Aggiorna i metadati dell'istanza con hostname, ipv4, domain e url.
-import json
-import socket
-import subprocess
 import mysql.connector
-import mysql
 import requests
 import sys
+import json
 from base64 import b64decode
 from Crypto.Cipher import AES
 from collections import OrderedDict
+import socket
+import subprocess
  
 def send_morpheus_output(status, message):
     """Emette l'output JSON nel formato atteso da Morpheus."""
