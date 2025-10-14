@@ -14,7 +14,7 @@ import json
 import requests
 import os
 import sys
-
+import hashlib
 
 def send_morpheus_output(status, message):
     """Formatta l'output per Morpheus"""
@@ -24,6 +24,28 @@ def send_morpheus_output(status, message):
     }
     print(json.dumps(output, indent=2))
 
+def md5_to_base62_short(instance_name: str) -> str:
+    # Calcola MD5 dell'istanza
+    md5_hash = hashlib.md5(instance_name.encode('utf-8')).hexdigest()
+    
+    # Converte l'MD5 (hex) in un intero
+    big_int = int(md5_hash, 16)
+    
+    # Conversione in Base62
+    chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+    result = ""
+    base = 62
+
+    while big_int > 0:
+        big_int, remainder = divmod(big_int, base)
+        result = chars[remainder] + result
+
+    if not result:
+        result = "0"
+
+    # Prende i primi 2 caratteri
+    short_hash = result[:2]
+    return short_hash
 
 def get_instance_details(instance_id, api_url, token):
     """Recupera i dettagli dell'istanza da Morpheus"""
@@ -96,7 +118,9 @@ def resolve_parameters():
 def main():
     try:
         print("DEBUG Hostname =", morpheus['instance']['hostname'])
+        print("DEBUG InstanceName =", morpheus['instance']['name'])
         print("DEBUG DomainName =", morpheus['instance']['domainName'])
+        print("DEBUG MD5=", md5_to_base62_short(morpheus['instance']['name']))
         
         instance_id, api_url, token = resolve_parameters()
 
