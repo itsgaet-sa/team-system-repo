@@ -14,6 +14,7 @@ import json
 import socket
 import subprocess
 import mysql.connector
+import mysql
 import requests
 import sys
 from base64 import b64decode
