@@ -10,11 +10,6 @@
 # Continue on error: False
 # Retryable: False
 # Description: Aggiorna i metadati dell'istanza con hostname, ipv4, domain e url.
-$VerbosePreference = 'SilentlyContinue'
-$DebugPreference = 'SilentlyContinue'
-$InformationPreference = 'SilentlyContinue'
-$WarningPreference = 'SilentlyContinue'
-
 import json
 import socket
 import subprocess
