@@ -95,6 +95,10 @@ def resolve_parameters():
 
 def main():
     try:
+        print("DEBUG MORPHEUS_INSTANCE_ID =", os.environ.get("MORPHEUS_INSTANCE_ID"))
+        print("DEBUG MORPHEUS_API_URL =", os.environ.get("MORPHEUS_API_URL"))
+        print("DEBUG MORPHEUS_API_TOKEN =", "SET" if os.environ.get("MORPHEUS_API_TOKEN") else "MISSING")
+        
         instance_id, api_url, token = resolve_parameters()
 
         # Recupera i dettagli dell'istanza
