@@ -125,7 +125,7 @@ def main():
         hostname = morpheus['instance']['hostname'] + md5_short        
         domain = "easyfattincloud.it"
         url = f"{hostname}.{domain}" if hostname else None
-        print(morpheus['internalIp'])
+        internalIp = morpheus['internalIp']
 
         # Recupera e aggiorna le customOptions
         # current_custom_options = instance.get('config', {}).get('customOptions', {})
@@ -144,7 +144,8 @@ def main():
         send_morpheus_output("success", {
             "hostname": hostname,
             "domain": domain,
-            "url": url
+            "url": url,
+            "ipv4": internalIp
         })
 
     except Exception as e:
