@@ -117,10 +117,12 @@ def resolve_parameters():
 
 def main():
     try:
-     
-
         # Estrae le informazioni principali
-        hostname = morpheus['instance']['hostname'] + md5_short = md5_to_base62_short(morpheus['instance']['name'])
+        # Calcola l'MD5 abbreviato
+        md5_short = md5_to_base62_short(morpheus['instance']['name'])
+        
+        # Costruisce l'hostname unendo il valore originale e l'MD5
+        hostname = morpheus['instance']['hostname'] + md5_short        
         domain = "easyfattincloud.it"
         url = f"{hostname}.{domain}" if hostname else None
 
