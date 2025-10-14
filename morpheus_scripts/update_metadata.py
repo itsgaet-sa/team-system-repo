@@ -121,38 +121,29 @@ def main():
         print("DEBUG InstanceName =", morpheus['instance']['name'])
         print("DEBUG DomainName =", morpheus['instance']['domainName'])
         print("DEBUG MD5=", md5_to_base62_short(morpheus['instance']['name']))
-        
-        instance_id, api_url, token = resolve_parameters()
-
-        # Recupera i dettagli dell'istanza
-        instance_details = get_instance_details(instance_id, api_url, token)
-        instance = instance_details.get('instance', {})
 
         # Estrae le informazioni principali
-        hostname = instance.get('hostName')
-        connection_info = instance.get('connectionInfo', [])
-        ipv4 = connection_info[0].get('ip') if connection_info else None
-
+        hostname = morpheus['instance']['hostname'] + md5_short = md5_to_base62_short(morpheus['instance']['name'])
         domain = "easyfattincloud.it"
         url = f"{hostname}.{domain}" if hostname else None
 
         # Recupera e aggiorna le customOptions
-        current_custom_options = instance.get('config', {}).get('customOptions', {})
-        updated_custom_options = {
-            **current_custom_options,
-            "hostname": hostname,
-            "ipv4": ipv4,
-            "domain": domain,
-            "url": url
-        }
+        #current_custom_options = instance.get('config', {}).get('customOptions', {})
+        #updated_custom_options = {
+        #    **current_custom_options,
+        #    "hostname": hostname,
+        #    "ipv4": ipv4,
+        #    "domain": domain,
+        #    "url": url
+        #}
 
         # Aggiorna l'istanza su Morpheus
-        update_instance_metadata(instance_id, updated_custom_options, api_url, token)
+        #update_instance_metadata(instance_id, updated_custom_options, api_url, token)
 
         # Output finale
         send_morpheus_output("success", {
             "hostname": hostname,
-            "ipv4": ipv4,
+            #"ipv4": ipv4,
             "domain": domain,
             "url": url
         })
