@@ -125,9 +125,7 @@ def main():
         hostname = morpheus['instance']['hostname'] + md5_short        
         domain = "easyfattincloud.it"
         url = f"{hostname}.{domain}" if hostname else None
-        print(morpheus['instance']['customOptions'])
-        morpheus['instance']['customOptions']['instance-hostname'] = hostname
-        print(morpheus['instance']['customOptions'])
+        print(morpheus['internalIp'])
 
         # Recupera e aggiorna le customOptions
         # current_custom_options = instance.get('config', {}).get('customOptions', {})
