@@ -134,6 +134,9 @@ def main():
         # Aggiorna i custom options
         updated_custom_options = morpheus['instance']['customOptions']
         updated_custom_options["instance-hostname"] = hostname
+        updated_custom_options["instance-ip"] = internalIp
+        updated_custom_options["instance-fqdn"] = url
+        updated_custom_options["instance-domain"] = domain
         
         # Prepara payload
         # Recupera e aggiorna le customOptions
