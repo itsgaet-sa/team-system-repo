@@ -126,6 +126,14 @@ def main():
         domain = "easyfattincloud.it"
         url = f"{hostname}.{domain}" if hostname else None
         internalIp = morpheus['internalIp']
+        
+        instance_id = morpheus.get("instance", {}).get("id", None)
+        server_id = morpheus.get("server", {}).get("id", None)
+        token = morpheus.get("server", {}).get("apiKey", None)
+
+        print(instance_id)
+        print(server_id)
+        print(token)
 
         # Recupera e aggiorna le customOptions
         # current_custom_options = instance.get('config', {}).get('customOptions', {})
