@@ -128,13 +128,15 @@ def main():
         internalIp = morpheus['internalIp']
         
         instance_id = morpheus.get("instance", {}).get("id", None)
-        server_id = morpheus.get("server", {}).get("id", None)
-        token = morpheus.get("server", {}).get("apiKey", None)
+        server_url = morpheus.get('applianceUrl')
+        token = morpheus['apiAccessToken']
+        api_url = f"{server_url}/api/instances/{instance_id}"
 
-        print(instance_id)
-        print(server_id)
-        print(token)
-
+        # Aggiorna i custom options
+        updated_custom_options = morpheus['instance']['customOptions']
+        updated_custom_options["instance-hostname"] = hostname
+        
+        # Prepara payload
         # Recupera e aggiorna le customOptions
         # current_custom_options = instance.get('config', {}).get('customOptions', {})
         # updated_custom_options = {
@@ -146,7 +148,7 @@ def main():
         #}
 
         # Aggiorna l'istanza su Morpheus
-        #update_instance_metadata(instance_id, updated_custom_options, api_url, token)
+        update_instance_metadata(instance_id, updated_custom_options, api_url, token)
 
         # Output finale
         send_morpheus_output("success", {
