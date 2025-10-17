@@ -131,6 +131,8 @@ def main():
         api_url = morpheus['morpheus']['applianceUrl']
         token = morpheus['morpheus']['apiAccessToken']
 
+        print(morpheus['instance']['customOptions'])
+
         # Aggiorna i custom options
         updated_custom_options = morpheus['instance']['customOptions']
         updated_custom_options["instance-hostname"] = hostname
