@@ -128,10 +128,8 @@ def main():
         internalIp = morpheus['internalIp']
         
         instance_id = morpheus.get("instance", {}).get("id", None)
-        server_url = morpheus['morpheus']['applianceUrl']
+        api_url = morpheus['morpheus']['applianceUrl']
         token = morpheus['morpheus']['apiAccessToken']
-        api_url = f"{server_url}/api/instances/{instance_id}"
-
 
         # Aggiorna i custom options
         updated_custom_options = morpheus['instance']['customOptions']
