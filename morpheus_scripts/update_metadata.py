@@ -129,7 +129,7 @@ def main():
         
         instance_id = morpheus.get("instance", {}).get("id", None)
         server_url = morpheus['morpheus']['applianceUrl']
-        token = morpheus['morpheus']['ApiAccessToken']
+        token = morpheus['morpheus']['apiAccessToken']
         api_url = f"{server_url}/api/instances/{instance_id}"
 
 
