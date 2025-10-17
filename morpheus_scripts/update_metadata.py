@@ -129,10 +129,10 @@ def main():
         
         instance_id = morpheus.get("instance", {}).get("id", None)
         server_url = morpheus.get('applianceUrl')
+        print(morpheus)
         token = morpheus.getApiAccessToken()
         api_url = f"{server_url}/api/instances/{instance_id}"
 
-        print(token)
 
         # Aggiorna i custom options
         updated_custom_options = morpheus['instance']['customOptions']
