@@ -86,6 +86,7 @@ def main():
         
         instance_id = morpheus.get("instance", {}).get("id", None)
         api_url = morpheus['morpheus']['applianceUrl']
+        print(api_url)
         token = morpheus['morpheus']['apiAccessToken']
 
         # Aggiorna i custom options
