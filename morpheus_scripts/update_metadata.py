@@ -80,7 +80,7 @@ def main():
         
         # Costruisce l'hostname unendo il valore originale e l'MD5
         hostname = morpheus['instance']['hostname'] + md5_short        
-        domain = "easyfattincloud.it"
+        domain = "easyfattincloud"
         url = f"https://{hostname}.{domain}" if hostname else None
         internalIp = morpheus['internalIp']
         
