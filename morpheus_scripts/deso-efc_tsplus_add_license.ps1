@@ -20,6 +20,7 @@ if ($licenseUsersInput -and $licenseUsersInput -match '^\d+$') {
     $users = [int]$licenseUsersInput
 } else {
     $users = 5
+    Write-Output "[INFO] Numero utenti non specificato, utilizzo valore default: 5"
 }
 
 Write-Output "[INFO] Server: $nomevm"
