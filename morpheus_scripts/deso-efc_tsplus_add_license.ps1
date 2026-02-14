@@ -11,20 +11,16 @@
 # Retryable: False
 # Description: Aggiunta della licenza di TSPlus per gli utenti sui server DANEA EFC (default 5 utenti)
 
-try {
-    $nomevm = "<%=instance.name%>"
-    $users = if ("<%=licenseUsers%>") { [int]"<%=licenseUsers%>" } else { 5 }
-    
-    # Log parametri
-    Write-Output "Numero utenti licenza TSPlus: $users"
-    Write-Output "Server di riferimento: $nomevm"
-    
-    # & "C:\Program Files (x86)\TSplus\UserDesktop\files\AdminTool.exe" /vl /activate ZXR4-MMTS-G4EW-ZPVG /users $users /edition Enterprise /supportyears 0 /comments $nomevm
-    
-    Write-Output "Script completato correttamente"
-    exit 0
-    
-} catch {
-    Write-Error "Errore: $($_.Exception.Message)"
-    exit 1
-}
+$nomevm = "<%=instance.name%>"
+$users = if ("<%=licenseUsers%>") { [int]"<%=licenseUsers%>" } else { 5 }
+
+# Log parametri e instance completa
+Write-Output "=== INFORMAZIONI INSTANCE ==="
+Write-Output "Instance completa: <%=instance%>"
+Write-Output "Nome VM: $nomevm"
+Write-Output "Numero utenti licenza TSPlus: $users"
+
+# & "C:\Program Files (x86)\TSplus\UserDesktop\files\AdminTool.exe" /vl /activate ZXR4-MMTS-G4EW-ZPVG /users $users /edition Enterprise /supportyears 0 /comments $nomevm
+
+Write-Output "Script completato correttamente"
+exit 0
