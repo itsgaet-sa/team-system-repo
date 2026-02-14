@@ -1,5 +1,5 @@
 # Autore: G.ABBATICCHIO
-# Revisione: 1.4
+# Revisione: 1.5
 # Data: 14/02/2026
 # Code: efc_tsplus_add_license
 # Source: repo
@@ -17,15 +17,16 @@ Write-Output "========================================"
 
 $nomevm = "<%=instance.name%>"
 
-# Gestione sicura del parametro licenseUsers dalla form
+# Accesso corretto a customOptions
 $licenseUsersInput = "<%=customOptions.licenseUsers%>"
-$users = if ($licenseUsersInput -and $licenseUsersInput -ne '' -and $licenseUsersInput -ne '<%=customOptions.licenseUsers%>') { 
-    [int]$licenseUsersInput 
-} else { 
-    5 
+Write-Output "DEBUG - Valore raw licenseUsers: '$licenseUsersInput'"
+
+if ($licenseUsersInput -and $licenseUsersInput -match '^\d+$') {
+    $users = [int]$licenseUsersInput
+} else {
+    $users = 5
 }
 
-Write-Output "Instance completa: <%=instance%>"
 Write-Output "Nome VM: $nomevm"
 Write-Output "Numero utenti licenza TSPlus: $users"
 Write-Output "Data esecuzione: $(Get-Date)"
