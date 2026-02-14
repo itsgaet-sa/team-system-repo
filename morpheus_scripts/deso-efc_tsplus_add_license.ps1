@@ -1,6 +1,6 @@
 # Autore: G.ABBATICCHIO
-# Revisione: 1.1
-# Data: 12/02/2026
+# Revisione: 1.2
+# Data: 14/02/2026
 # Code: efc_tsplus_add_license
 # Source: repo
 # Result Type: none
@@ -10,12 +10,21 @@
 # Continue on error: False
 # Retryable: False
 # Description: Aggiunta della licenza di TSPlus per gli utenti sui server DANEA EFC (default 5 utenti)
- 
-$nomevm = "<%=instance.name%>"
-$users = if ("<%=licenseUsers%>") { [int]"<%=licenseUsers%>" } else { 5 }
 
-# Print valore utenti
-Write-Output "Numero utenti licenza TSPlus: $users"
-Write-Output "Server di riferimento: $nomevm"
-
-# & "C:\Program Files (x86)\TSplus\UserDesktop\files\AdminTool.exe" /vl /activate ZXR4-MMTS-G4EW-ZPVG /users $users /edition Enterprise /supportyears 0 /comments $nomevm
+try {
+    $nomevm = "<%=instance.name%>"
+    $users = if ("<%=licenseUsers%>") { [int]"<%=licenseUsers%>" } else { 5 }
+    
+    # Log parametri
+    Write-Output "Numero utenti licenza TSPlus: $users"
+    Write-Output "Server di riferimento: $nomevm"
+    
+    # & "C:\Program Files (x86)\TSplus\UserDesktop\files\AdminTool.exe" /vl /activate ZXR4-MMTS-G4EW-ZPVG /users $users /edition Enterprise /supportyears 0 /comments $nomevm
+    
+    Write-Output "Script completato correttamente"
+    exit 0
+    
+} catch {
+    Write-Error "Errore: $($_.Exception.Message)"
+    exit 1
+}
