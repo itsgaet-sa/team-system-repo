@@ -15,10 +15,10 @@ Write-Output "========================================"
 Write-Output "INIZIO SCRIPT TSPLUS LICENSE"
 Write-Output "========================================"
 
+Write-Output "Instance completa: <%=instance%>"
 $nomevm = "<%=instance.name%>"
 $users = if ("<%=licenseUsers%>") { [int]"<%=licenseUsers%>" } else { 5 }
 
-Write-Output "Instance completa: <%=instance%>"
 Write-Output "Nome VM: $nomevm"
 Write-Output "Numero utenti licenza TSPlus: $users"
 Write-Output "Data esecuzione: $(Get-Date)"
