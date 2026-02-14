@@ -28,5 +28,3 @@ Write-Output "Data esecuzione: $(Get-Date)"
 Write-Output "========================================"
 Write-Output "SCRIPT COMPLETATO CON SUCCESSO"
 Write-Output "========================================"
-
-exit 0
