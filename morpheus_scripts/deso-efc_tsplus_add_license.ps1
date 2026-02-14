@@ -11,7 +11,7 @@
 # Retryable: False
 # Description: Aggiunta della licenza di TSPlus per gli utenti sui server DANEA EFC (default 5 utenti)
  
-$nomevm = "<%=instance.name%>
+$nomevm = "<%=instance.name%>"
 $users = if ("<%=licenseUsers%>") { [int]"<%=licenseUsers%>" } else { 5 }
 
 # Print valore utenti
