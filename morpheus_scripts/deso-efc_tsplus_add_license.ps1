@@ -1,7 +1,7 @@
 # Autore: G.ABBATICCHIO
 # Revisione: 1.5
 # Data: 14/02/2026
-# Code: efc_tsplus_add_license
+# Code: deso_efc_tsplus_add_license
 # Source: repo
 # Result Type: none
 # Elevated Shell: True
