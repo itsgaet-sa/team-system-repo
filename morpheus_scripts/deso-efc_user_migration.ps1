@@ -1,5 +1,5 @@
 # Autore: G.ABBATICCHIO
-# Revisione: 1.4
+# Revisione: 1.5
 # Data: 15/02/2026
 # Code: efc_user_migration_prep
 # Source: repo
@@ -169,6 +169,7 @@ try {
             
             return @{
                 FilePath = $queueFilePath
+                FileName = $queueFileName
                 Sequence = $nextSequence
                 Status = "Success"
             }
@@ -192,6 +193,35 @@ try {
     # Aggiorna lo stato in Morpheus
     Update-MigrationStatus -Status "Pending"
     
+    # Avvia il dispatcher per processare la coda
+    Write-Output "[INFO] Avvio dispatcher per elaborazione migrazione..."
+    try {
+        $dispatcherResult = Invoke-Command -Session $session -ScriptBlock {
+            $dispatcherScript = "D:\tools\migration\dispatcher.ps1"
+            
+            if (-not (Test-Path $dispatcherScript)) {
+                throw "Script dispatcher non trovato: $dispatcherScript"
+            }
+            
+            # Esegue il dispatcher
+            & $dispatcherScript
+            
+            return @{
+                Status = "Dispatcher avviato"
+            }
+        }
+        
+        Write-Output "[INFO] Dispatcher avviato con successo"
+        
+    } catch {
+        Write-Output "[WARNING] Errore durante l'avvio del dispatcher: $($_.Exception.Message)"
+        Write-Output "[WARNING] La migrazione rimarrà in coda fino al prossimo avvio del dispatcher"
+    }
+    
+    # Salva il nome del file per il monitoraggio
+    $queueFileName = $result.FileName
+    $queueFileBaseName = [System.IO.Path]::GetFileNameWithoutExtension($queueFileName)
+    
 } catch {
     Write-Output "[ERROR] Errore durante l'accodamento della migrazione"
     Write-Output "[ERROR] Dettaglio: $($_.Exception.Message)"
@@ -200,8 +230,104 @@ try {
     exit 1
 }
 
+# Monitoraggio stato della migrazione
+Write-Output "[INFO] =========================================="
+Write-Output "[INFO] Avvio monitoraggio stato migrazione..."
+Write-Output "[INFO] =========================================="
+
+$monitoringMaxTime = 5400  # 1 ora di timeout
+$monitoringInterval = 10    # Controlla ogni 10 secondi
+$elapsedTime = 0
+$migrationCompleted = $false
+
+while ($elapsedTime -lt $monitoringMaxTime -and -not $migrationCompleted) {
+    try {
+        $fileStatus = Invoke-Command -Session $session -ScriptBlock {
+            param($baseName, $queuePath)
+            
+            # Cerca il file con estensioni .done o .err
+            $doneFile = Join-Path $queuePath "$baseName.done"
+            $errFile = Join-Path $queuePath "$baseName.err"
+            $txtFile = Join-Path $queuePath "$baseName.txt"
+            $workFile = Join-Path $queuePath "$baseName.work"
+            if (Test-Path $doneFile) {
+                return @{
+                    Status = "Completed"
+                    FilePath = $doneFile
+                }
+            } elseif (Test-Path $errFile) {
+                # Legge il contenuto del file di errore se presente
+                $errorContent = Get-Content $errFile -Raw -ErrorAction SilentlyContinue
+                return @{
+                    Status = "Failed"
+                    FilePath = $errFile
+                    ErrorMessage = $errorContent
+                }
+            } elseif (Test-Path $txtFile) {
+                return @{
+                    Status = "Scheduled"
+                    FilePath = $txtFile
+                } elseif (Test-Path $workFile) {
+                return @{
+                    Status = "Processing"
+                    FilePath = $txtFile
+                }
+            } else {
+                return @{
+                    Status = "Unknown"
+                    FilePath = $null
+                }
+            }
+        } -ArgumentList $queueFileBaseName, "D:\tools\migration\incoming"
+        
+        Write-Output "[INFO] Stato corrente: $($fileStatus.Status) - Tempo trascorso: $elapsedTime secondi"
+        
+        if ($fileStatus.Status -eq "Completed") {
+            Write-Output "[SUCCESS] Migrazione completata con successo!"
+            Update-MigrationStatus -Status "Completed"
+            $migrationCompleted = $true
+            
+        } elseif ($fileStatus.Status -eq "Failed") {
+            $errorMsg = if ($fileStatus.ErrorMessage) { $fileStatus.ErrorMessage } else { "Errore durante la migrazione" }
+            Write-Output "[ERROR] Migrazione fallita: $errorMsg"
+            Update-MigrationStatus -Status "Failed: $errorMsg"
+            $migrationCompleted = $true
+            
+            # Chiude la sessione e esce con errore
+            Remove-PSSession -Session $session
+            exit 1
+            
+        } elseif ($fileStatus.Status -eq "Unknown") {
+            Write-Output "[WARNING] File di migrazione non trovato - possibile errore nel processo"
+            Update-MigrationStatus -Status "Failed: File di migrazione non trovato"
+            $migrationCompleted = $true
+            
+            # Chiude la sessione e esce con errore
+            Remove-PSSession -Session $session
+            exit 1
+        }
+        
+        if (-not $migrationCompleted) {
+            Start-Sleep -Seconds $monitoringInterval
+            $elapsedTime += $monitoringInterval
+        }
+        
+    } catch {
+        Write-Output "[ERROR] Errore durante il monitoraggio: $($_.Exception.Message)"
+        Start-Sleep -Seconds $monitoringInterval
+        $elapsedTime += $monitoringInterval
+    }
+}
+
+# Verifica timeout
+if ($elapsedTime -ge $monitoringMaxTime -and -not $migrationCompleted) {
+    Write-Output "[WARNING] Timeout monitoraggio raggiunto ($monitoringMaxTime secondi)"
+    Write-Output "[WARNING] La migrazione potrebbe essere ancora in corso"
+    Update-MigrationStatus -Status "Failed: verifica manuale richiesta"
+}
+
 # Chiude la sessione remota
 Remove-PSSession -Session $session
 Write-Output "[INFO] Sessione remota chiusa"
 
-Write-Output "[SUCCESS] Processo di accodamento migrazione completato"
+Write-Output "[SUCCESS] Processo di migrazione completato"
