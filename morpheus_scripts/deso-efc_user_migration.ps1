@@ -14,7 +14,7 @@
 Write-Output "[INFO] Avvio processo di migrazione utente..."
 
 # Parametri da Morpheus
-$migrationStatus = "<%=customOptions.mIgrateData%>"
+$migrationStatus = "<%=customOptions.MigrateData%>"
 $fromUser = "<%=customOptions.fromUser%>"
 $fromServer = "<%=customOptions.fromServer%>"
 $toServer = "<%=instance.containers[0].server.internalIp%>"
