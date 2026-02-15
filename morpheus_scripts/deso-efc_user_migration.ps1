@@ -14,17 +14,17 @@
 Write-Output "[INFO] Controllo richiesta migrazione utente..."
 
 # Parametri da Morpheus
-$migrationStatus = "<%=customOptions.mIgrateData%>"
+$migrationValue = "<%=customOptions.MigrateData%>"
 $fromUser = "<%=customOptions.fromUser%>"
 $fromServer = "<%=customOptions.fromServer%>"
 $toServer = "<%=instance.containers[0].server.internalIp%>"
 $instanceName = "<%=instance.name%>"
 
 Write-Output "[INFO] Instance: $instanceName"
-Write-Output "[INFO] Stato migrazione richiesta: '$migrationStatus'"
+Write-Output "[INFO] Stato migrazione richiesta: '$migrationValue'"
 
 # Verifica se la migrazione è attiva (stringa "true")
-if ($migrationStatus -ne "true") {
+if ($migrationValue -ne "true") {
     Write-Output "[INFO] Migrazione dati NON richiesta - Skip"
     Write-Output "[SUCCESS] Nessuna migrazione da effettuare"
     exit 0
