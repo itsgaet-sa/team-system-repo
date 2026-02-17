@@ -57,9 +57,9 @@ function Update-MigrationStatus {
 Write-Output "[INFO] Controllo richiesta migrazione utente..."
 
 # Parametri da Morpheus
-$migrationValue  = "<%=customOptions.MigrateData%>"
-$fromUser        = "<%=customOptions.fromUser%>"
-$fromServer      = "<%=customOptions.fromServer%>"
+$migrationValue  = "true"
+$fromUser        = "userFake"
+$fromServer      = "serverFake"
 $toServer        = "<%=instance.containers[0].server.internalIp%>"
 $instanceName    = "<%=instance.name%>"
 $instanceId      = "<%=instance.id%>"
