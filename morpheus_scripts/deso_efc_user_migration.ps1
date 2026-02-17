@@ -19,9 +19,6 @@ $ProgressPreference    = "SilentlyContinue"
 # FUNZIONI DI SUPPORTO
 # ──────────────────────────────────────────────────────────────────────────────
 
-# Riemette nel log locale ogni riga di output prodotta da un blocco remoto.
-# Invoke-Command restituisce Write-Output del blocco remoto come oggetti nella
-# pipeline: questa funzione li intercetta e li stampa prima del valore di ritorno.
 function Write-RemoteLog {
     param([object[]]$RemoteOutput)
     foreach ($line in $RemoteOutput) {
@@ -31,34 +28,35 @@ function Write-RemoteLog {
     }
 }
 
-# Aggiorna lo stato della migrazione tramite API Morpheus (best effort)
+# Aggiorna lo stato della migrazione tramite API Morpheus (DISABILITATO PER ORA)
 function Update-MigrationStatus {
     param([string]$Status)
 
-    try {
-        $instanceId     = "<%=instance.id%>"
-        $morpheusApiUrl = "<%=morpheus.applianceUrl%>/api/instances/$instanceId"
-        $morpheusToken  = "<%=morpheus.apiAccessToken%>"
-
-        $headers = @{
-            "Authorization" = "Bearer $morpheusToken"
-            "Content-Type"  = "application/json"
-        }
-
-        $body = @{
-            instance = @{
-                customOptions = @{
-                    MigrationStatus = $Status
-                }
-            }
-        } | ConvertTo-Json -Depth 10
-
-        Invoke-RestMethod -Uri $morpheusApiUrl -Method Put -Headers $headers -Body $body -ErrorAction Stop | Out-Null
-        Write-Output "[INFO] Stato migrazione aggiornato in Morpheus: '$Status'"
-    }
-    catch {
-        Write-Output "[WARNING] Impossibile aggiornare lo stato in Morpheus: $($_.Exception.Message)"
-    }
+    # TODO: riabilitare quando serve aggiornare customOptions.MigrationStatus
+    # try {
+    #     $instanceId     = "<%=instance.id%>"
+    #     $morpheusApiUrl = "<%=morpheus.applianceUrl%>/api/instances/$instanceId"
+    #     $morpheusToken  = "<%=morpheus.apiAccessToken%>"
+    #
+    #     $headers = @{
+    #         "Authorization" = "Bearer $morpheusToken"
+    #         "Content-Type"  = "application/json"
+    #     }
+    #
+    #     $body = @{
+    #         instance = @{
+    #             customOptions = @{
+    #                 MigrationStatus = $Status
+    #             }
+    #         }
+    #     } | ConvertTo-Json -Depth 10
+    #
+    #     Invoke-RestMethod -Uri $morpheusApiUrl -Method Put -Headers $headers -Body $body -ErrorAction Stop | Out-Null
+    #     Write-Output "[INFO] Stato migrazione aggiornato in Morpheus: '$Status'"
+    # }
+    # catch {
+    #     Write-Output "[WARNING] Impossibile aggiornare lo stato in Morpheus: $($_.Exception.Message)"
+    # }
 }
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -67,27 +65,24 @@ function Update-MigrationStatus {
 
 Write-Output "[INFO] Controllo richiesta migrazione utente..."
 
-# Parametri da Morpheus / Form (in questo esempio sono valorizzati statici)
-$migrationValue    = "true"
-$fromUser          = "userFake"
-$fromServer        = "serverFake"
+# Parametri (FAKE)
+$migrationValue  = "true"
+$fromUser        = "userFake"
+$fromServer      = "serverFake"
+$toServer        = "10.0.0.10"      # FAKE
+$instanceName    = "EFC002-TT-W-00000106" # FAKE
+$instanceId      = "00000000-0000-0000-0000-000000000000" # FAKE
 
-# Esecuzione su Resource: preferire server.internalIp (più stabile del percorso su instance.containers)
-$toServer          = "<%=server.internalIp%>"
+# Server dispatcher (REALE)
+$migrationServerIP = "10.182.1.11"
 
-$instanceName      = "<%=instance.name%>"
-$instanceId        = "<%=instance.id%>"
-
-$migrationServerIP = "10.182.1.11"  # TODO: Configurare IP del server di migrazione
-
-# Recupera credenziali dal Cypher di Morpheus
-# NB: usare apici singoli nel codice PowerShell intorno alle espressioni Morpheus per evitare problemi con caratteri speciali
+# Recupera credenziali dal Cypher di Morpheus (REALI)
 $migrationUserRaw = '<%=cypher.read("secret/EFC-TS_MIG_DANEA-USR",true)%>'
 $migrationPassRaw = '<%=cypher.read("secret/EFC-TS_MIG_DANEA-PWD",true)%>'
 
 if ([string]::IsNullOrWhiteSpace($migrationUserRaw) -or [string]::IsNullOrWhiteSpace($migrationPassRaw)) {
     Write-Output "[ERROR] Credenziali migrazione non recuperate dal Cypher (user o password vuoti)"
-    Update-MigrationStatus -Status "Failed: credenziali migrazione non disponibili"
+    # Update-MigrationStatus -Status "Failed: credenziali migrazione non disponibili"
     exit 1
 }
 
@@ -98,14 +93,13 @@ try {
 }
 catch {
     Write-Output "[ERROR] Errore creazione PSCredential: $($_.Exception.Message)"
-    Update-MigrationStatus -Status "Failed: errore creazione PSCredential - $($_.Exception.Message)"
+    # Update-MigrationStatus -Status "Failed: errore creazione PSCredential - $($_.Exception.Message)"
     exit 1
 }
 
 Write-Output "[INFO] Instance: $instanceName"
 Write-Output "[INFO] Stato migrazione richiesta: '$migrationValue'"
 
-# Verifica se la migrazione è attiva
 if ($migrationValue -ne "true") {
     Write-Output "[INFO] Migrazione dati NON richiesta - Skip"
     Write-Output "[SUCCESS] Nessuna migrazione da effettuare"
@@ -119,17 +113,17 @@ Write-Output "[INFO] =========================================="
 # Validazione parametri obbligatori
 if ([string]::IsNullOrWhiteSpace($fromUser)) {
     Write-Output "[ERROR] Parametro 'fromUser' mancante o vuoto - impossibile procedere"
-    Update-MigrationStatus -Status "Failed: fromUser mancante"
+    # Update-MigrationStatus -Status "Failed: fromUser mancante"
     exit 1
 }
 if ([string]::IsNullOrWhiteSpace($fromServer)) {
     Write-Output "[ERROR] Parametro 'fromServer' mancante o vuoto - impossibile procedere"
-    Update-MigrationStatus -Status "Failed: fromServer mancante"
+    # Update-MigrationStatus -Status "Failed: fromServer mancante"
     exit 1
 }
 if ([string]::IsNullOrWhiteSpace($toServer)) {
-    Write-Output "[ERROR] Parametro 'toServer' non valorizzato (server.internalIp vuoto o non disponibile nel contesto Resource)"
-    Update-MigrationStatus -Status "Failed: toServer non valorizzato"
+    Write-Output "[ERROR] Parametro 'toServer' non valorizzato"
+    # Update-MigrationStatus -Status "Failed: toServer non valorizzato"
     exit 1
 }
 
@@ -154,7 +148,7 @@ try {
 catch {
     Write-Output "[ERROR] Impossibile connettersi al server dispatcher ($migrationServerIP)"
     Write-Output "[ERROR] Dettaglio: $($_.Exception.Message)"
-    Update-MigrationStatus -Status "Failed: connessione dispatcher - $($_.Exception.Message)"
+    # Update-MigrationStatus -Status "Failed: connessione dispatcher - $($_.Exception.Message)"
     if ($session) { Remove-PSSession -Session $session -ErrorAction SilentlyContinue }
     exit 1
 }
@@ -167,8 +161,6 @@ Write-Output "[INFO] Creazione richiesta di migrazione sul dispatcher..."
 $result = $null
 
 try {
-    # Il blocco remoto usa Write-Output per i log; vengono restituiti nella pipeline
-    # insieme all'hashtable di ritorno: li separiamo per tipo.
     $rawOutput = Invoke-Command -Session $session -ErrorAction Stop -ScriptBlock {
         param($fromUser, $fromServer, $toServer)
 
@@ -176,7 +168,6 @@ try {
         $queuePath         = Join-Path $migrationBasePath "incoming"
         $lockFile          = Join-Path $migrationBasePath "queue.lock"
 
-        # Crea directory queue se non esiste
         if (-not (Test-Path $queuePath)) {
             try {
                 New-Item -Path $queuePath -ItemType Directory -Force | Out-Null
@@ -189,7 +180,6 @@ try {
             Write-Output "[REMOTE][INFO] Directory di coda già esistente: $queuePath"
         }
 
-        # Acquisizione lock per evitare race condition sulla numerazione
         Write-Output "[REMOTE][INFO] Acquisizione lock sulla coda..."
         $lockAcquired = $false
         $maxRetries   = 10
@@ -214,7 +204,6 @@ try {
         }
 
         try {
-            # Calcola il prossimo numero di sequenza
             $existingFiles = Get-ChildItem -Path $queuePath -Filter "migra_*.txt" -ErrorAction SilentlyContinue |
                 Where-Object { $_.Name -match 'migra_(\d+)\.txt' } |
                 ForEach-Object {
@@ -235,7 +224,6 @@ try {
 
             Write-Output "[REMOTE][INFO] Prossima sequenza: $nextSequence → file: $queueFileName"
 
-            # Creazione del file di coda
             try {
                 Set-Content -Path $queueFilePath -Value $queueContent -Force -ErrorAction Stop
                 Write-Output "[REMOTE][SUCCESS] File di coda creato: $queueFilePath"
@@ -245,7 +233,6 @@ try {
                 throw
             }
 
-            # Verifica che il file esista davvero dopo la scrittura
             if (Test-Path $queueFilePath) {
                 $fileSize = (Get-Item $queueFilePath).Length
                 Write-Output "[REMOTE][SUCCESS] Verifica file OK - dimensione: $fileSize byte"
@@ -263,7 +250,6 @@ try {
             }
 
         } finally {
-            # Rilascia sempre il lock
             if ($lockHandle) {
                 $lockHandle.Close()
                 $lockHandle.Dispose()
@@ -276,7 +262,6 @@ try {
 
     } -ArgumentList $fromUser, $fromServer, $toServer
 
-    # Separa i messaggi di log (stringhe) dal risultato strutturato (hashtable)
     $remoteMessages = $rawOutput | Where-Object { $_ -is [string] }
     $result         = $rawOutput | Where-Object { $_ -is [hashtable] } | Select-Object -Last 1
 
@@ -284,7 +269,7 @@ try {
 
     if (-not $result -or $result.Status -ne "Success") {
         Write-Output "[ERROR] Il blocco remoto non ha restituito un risultato valido"
-        Update-MigrationStatus -Status "Failed: risultato creazione file non valido"
+        # Update-MigrationStatus -Status "Failed: risultato creazione file non valido"
         if ($session) { Remove-PSSession -Session $session -ErrorAction SilentlyContinue }
         exit 1
     }
@@ -293,17 +278,16 @@ try {
     Write-Output "[INFO] Percorso: $($result.FilePath)"
     Write-Output "[INFO] Numero sequenza: $($result.Sequence)"
 
-    Update-MigrationStatus -Status "Pending"
+    # Update-MigrationStatus -Status "Pending"
 }
 catch {
     Write-Output "[ERROR] Errore durante l'accodamento della migrazione"
     Write-Output "[ERROR] Dettaglio: $($_.Exception.Message)"
-    Update-MigrationStatus -Status "Failed: accodamento - $($_.Exception.Message)"
+    # Update-MigrationStatus -Status "Failed: accodamento - $($_.Exception.Message)"
     if ($session) { Remove-PSSession -Session $session -ErrorAction SilentlyContinue }
     exit 1
 }
 
-# Nomi file per il monitoraggio
 $queueFileName     = $result.FileName
 $queueFileBaseName = [System.IO.Path]::GetFileNameWithoutExtension($queueFileName)
 
@@ -358,8 +342,8 @@ Write-Output "[INFO] =========================================="
 Write-Output "[INFO] Avvio monitoraggio stato migrazione..."
 Write-Output "[INFO] =========================================="
 
-$monitoringMaxTime   = 5400   # 90 minuti di timeout totale
-$monitoringInterval  = 10     # Controlla ogni 10 secondi
+$monitoringMaxTime   = 5400
+$monitoringInterval  = 10
 $elapsedTime         = 0
 $migrationCompleted  = $false
 $lastReportedStatus  = ""
@@ -376,17 +360,13 @@ while ($elapsedTime -lt $monitoringMaxTime -and -not $migrationCompleted) {
 
             if (Test-Path $doneFile) {
                 return @{ Status = "Completed";  FilePath = $doneFile }
-
             } elseif (Test-Path $errFile) {
                 $errorContent = Get-Content $errFile -Raw -ErrorAction SilentlyContinue
                 return @{ Status = "Failed"; FilePath = $errFile; ErrorMessage = $errorContent }
-
             } elseif (Test-Path $workFile) {
                 return @{ Status = "Processing"; FilePath = $workFile }
-
             } elseif (Test-Path $txtFile) {
                 return @{ Status = "Scheduled";  FilePath = $txtFile }
-
             } else {
                 return @{ Status = "Unknown";    FilePath = $null }
             }
@@ -407,7 +387,7 @@ while ($elapsedTime -lt $monitoringMaxTime -and -not $migrationCompleted) {
                 Write-Output "[SUCCESS] Migrazione completata con successo!"
                 Write-Output "[SUCCESS] File risultato: $($fileStatus.FilePath)"
                 Write-Output "[SUCCESS] =========================================="
-                Update-MigrationStatus -Status "Completed"
+                # Update-MigrationStatus -Status "Completed"
                 $migrationCompleted = $true
             }
 
@@ -418,7 +398,7 @@ while ($elapsedTime -lt $monitoringMaxTime -and -not $migrationCompleted) {
                 Write-Output "[ERROR] File errore : $($fileStatus.FilePath)"
                 Write-Output "[ERROR] Dettaglio   : $errorMsg"
                 Write-Output "[ERROR] =========================================="
-                Update-MigrationStatus -Status "Failed: $errorMsg"
+                # Update-MigrationStatus -Status "Failed: $errorMsg"
                 $migrationCompleted = $true
                 if ($session) { Remove-PSSession -Session $session -ErrorAction SilentlyContinue }
                 exit 1
@@ -426,7 +406,7 @@ while ($elapsedTime -lt $monitoringMaxTime -and -not $migrationCompleted) {
 
             "Unknown" {
                 Write-Output "[ERROR] File di migrazione non trovato sul dispatcher - il processo potrebbe aver perso traccia del file"
-                Update-MigrationStatus -Status "Failed: file di migrazione non trovato"
+                # Update-MigrationStatus -Status "Failed: file di migrazione non trovato"
                 $migrationCompleted = $true
                 if ($session) { Remove-PSSession -Session $session -ErrorAction SilentlyContinue }
                 exit 1
@@ -449,17 +429,15 @@ while ($elapsedTime -lt $monitoringMaxTime -and -not $migrationCompleted) {
     }
 }
 
-# Gestione timeout
 if (-not $migrationCompleted) {
     Write-Output "[WARNING] =========================================="
     Write-Output "[WARNING] Timeout monitoraggio raggiunto dopo $monitoringMaxTime secondi"
     Write-Output "[WARNING] La migrazione potrebbe essere ancora in corso"
     Write-Output "[WARNING] Verifica manuale richiesta sul file: $queueFileName"
     Write-Output "[WARNING] =========================================="
-    Update-MigrationStatus -Status "Failed: timeout - verifica manuale richiesta"
+    # Update-MigrationStatus -Status "Failed: timeout - verifica manuale richiesta"
 }
 
-# Chiusura sessione remota
 if ($session) {
     Remove-PSSession -Session $session -ErrorAction SilentlyContinue
 }
