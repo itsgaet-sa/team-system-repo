@@ -23,8 +23,8 @@ $instanceId = "<%=instance.id%>"
 $migrationServerIP = "10.182.1.11"  # TODO: Configurare IP del server di migrazione
 
 # Recupera credenziali dal Cypher di Morpheus
-$migrationUser = "<%=cypher.read('secret/migrationServerUser',true)%>"
-$migrationPass = "<%=cypher.read('secret/migrationServerPass',true)%>"
+$migrationUser = "<%=cypher.read('secret/EFC-TS_MIG_DANEA-USR',true)%>"
+$migrationPass = "<%=cypher.read('secret/EFC-TS_MIG_DANEA-PWD',true)%>"
 $migrationCred = New-Object System.Management.Automation.PSCredential($migrationUser, $migrationPass)
 
 Write-Output "[INFO] Instance: $instanceName"
