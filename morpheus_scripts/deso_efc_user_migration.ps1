@@ -20,7 +20,7 @@ $fromServer = "<%=customOptions.fromServer%>"
 $toServer = "<%=instance.containers[0].server.internalIp%>"
 $instanceName = "<%=instance.name%>"
 $instanceId = "<%=instance.id%>"
-$migrationServerIP = "10.182.X.X"  # TODO: Configurare IP del server di migrazione
+$migrationServerIP = "10.182.1.11"  # TODO: Configurare IP del server di migrazione
 
 # Recupera credenziali dal Cypher di Morpheus
 $migrationUser = "<%=cypher.read('secret/migrationServerUser',true)%>"
