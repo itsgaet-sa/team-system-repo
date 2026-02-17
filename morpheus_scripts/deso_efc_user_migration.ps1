@@ -60,7 +60,7 @@ Write-Output "[INFO] Controllo richiesta migrazione utente..."
 $migrationValue  = "true"
 $fromUser        = "userFake"
 $fromServer      = "serverFake"
-$toServer = "<%=instance.server.internalIp%>"
+$toServer = "<%=instance.internalIp%>"
 $instanceName    = "<%=instance.name%>"
 $instanceId      = "<%=instance.id%>"
 $migrationServerIP = "10.182.1.11"  # TODO: Configurare IP del server di migrazione
