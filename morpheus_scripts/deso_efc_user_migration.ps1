@@ -15,7 +15,7 @@
 # ──────────────────────────────────────────────────────────────────────────────
 # MODALITÀ TEST - tutte le connessioni remote sono simulate localmente
 # ──────────────────────────────────────────────────────────────────────────────
-$TEST_MODE = $true
+$TEST_MODE = $false
 
 # Impostazioni runtime
 $ErrorActionPreference = "Stop"
@@ -67,16 +67,16 @@ Write-Output "[INFO] Controllo richiesta migrazione utente..."
 $migrationValue = "true"
 $fromUser       = "userFake"
 $fromServer     = "serverFake"
-$toServer       = "10.0.0.10"
+$toServer       = "193.169.1.1"
 $instanceName   = "EFC002-TT-W-00000106"
 $instanceId     = "00000000-0000-0000-0000-000000000000"
 
 # ── Credenziali (FAKE - in produzione vengono dal Cypher di Morpheus) ─────────
 # PRODUZIONE:
-#   $migrationUserRaw = '<%=cypher.read("secret/EFC-TS_MIG_DANEA-USR",true)%>'
-#   $migrationPassRaw = '<%=cypher.read("secret/EFC-TS_MIG_DANEA-PWD",true)%>'
-$migrationUserRaw = "testuser"
-$migrationPassRaw = "testpassword"
+$migrationUserRaw = '<%=cypher.read("secret/EFC-TS_MIG_DANEA-USR",true)%>'
+$migrationPassRaw = '<%=cypher.read("secret/EFC-TS_MIG_DANEA-PWD",true)%>'
+# $migrationUserRaw = "testuser"
+# $migrationPassRaw = "testpassword"
 
 # ── Path locali per simulazione (sostituiscono D:\tools\migration sul dispatcher) ──
 $migrationBasePath = Join-Path $env:TEMP "migration_test"
