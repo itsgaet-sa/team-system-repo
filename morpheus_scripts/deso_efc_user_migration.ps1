@@ -80,7 +80,8 @@ $migrationPassRaw = '<%=cypher.read("secret/EFC-TS_MIG_DANEA-PWD",true)%>'
 #$migrationPassRaw = "testpassword"
 
 # ── Path locali per simulazione (sostituiscono D:\tools\migration sul dispatcher) ──
-$migrationBasePath = Join-Path $env:TEMP "migration_test"
+$tempRoot = [System.IO.Path]::GetTempPath()
+$migrationBasePath = Join-Path $tempRoot "migration_test"
 $queuePath         = Join-Path $migrationBasePath "incoming"
 
 # ── Server dispatcher (non usato in test mode) ────────────────────────────────
