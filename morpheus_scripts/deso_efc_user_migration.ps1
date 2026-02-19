@@ -87,10 +87,6 @@ $queuePath         = Join-Path $migrationBasePath "incoming"
 # ── Server dispatcher (non usato in test mode) ────────────────────────────────
 $migrationServerIP = "10.182.1.11"   # REALE - non contattato in TEST_MODE
 
-Test-WsMan 10.182.1.11
-
-
-
 
 # ──────────────────────────────────────────────────────────────────────────────
 if ([string]::IsNullOrWhiteSpace($migrationUserRaw) -or [string]::IsNullOrWhiteSpace($migrationPassRaw)) {
