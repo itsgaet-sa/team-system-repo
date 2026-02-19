@@ -16,7 +16,9 @@
 # MODALITÀ TEST - tutte le connessioni remote sono simulate localmente
 # ──────────────────────────────────────────────────────────────────────────────
 $TEST_MODE = $false
-Enable-PSRemoting -Force
+
+$PSVersionTable[System.Runtime.InteropServices.RuntimeInformation]::OSDescription
+
 
 
 # Impostazioni runtime
