@@ -72,17 +72,12 @@ $toServer        = "<%=instance.containers[0].server.internalIp%>"
 $instanceName    = "<%=instance.name%>"
 $instanceId      = "<%=instance.id%>"
 
-Write-Output $migrationValue
-Write-Output $fromUser
-
 # ── Credenziali (FAKE - in produzione vengono dal Cypher di Morpheus) ─────────
 # PRODUZIONE:
 #$migrationUserRaw = '<%=cypher.read("secret/EFC-TS_MIG_DANEA-USR",true)%>'
 $migrationUserRaw = 'ts_mig_danea@ad.easyfattincloud.it'
 
 $migrationPassRaw = '<%=cypher.read("secret/EFC-TS_MIG_DANEA-PWD",true)%>'
-Write-Output $migrationUserRaw
-Write-Output $migrationPassRaw
 #$migrationUserRaw = "testuser"
 #$migrationPassRaw = "testpassword"
 
