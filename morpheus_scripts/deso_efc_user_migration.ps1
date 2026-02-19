@@ -17,9 +17,6 @@
 # ──────────────────────────────────────────────────────────────────────────────
 $TEST_MODE = $false
 
-$PSVersionTable[System.Runtime.InteropServices.RuntimeInformation]::OSDescription
-
-
 
 # Impostazioni runtime
 $ErrorActionPreference = "Stop"
