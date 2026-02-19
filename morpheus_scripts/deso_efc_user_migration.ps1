@@ -65,12 +65,12 @@ function Update-MigrationStatus {
 Write-Output "[INFO] Controllo richiesta migrazione utente..."
 
 # ── Parametri (FAKE) ──────────────────────────────────────────────────────────
-$migrationValue = "true"
-$fromUser       = "userFake"
-$fromServer     = "serverFake"
-$toServer       = "193.169.1.1"
-$instanceName   = "EFC002-TT-W-00000106"
-$instanceId     = "00000000-0000-0000-0000-000000000000"
+$migrationValue  = "<%=customOptions.MigrateData%>"
+$fromUser        = "<%=customOptions.fromUser%>"
+$fromServer      = "<%=customOptions.fromServer%>"
+$toServer        = "<%=instance.containers[0].server.internalIp%>"
+$instanceName    = "<%=instance.name%>"
+$instanceId      = "<%=instance.id%>"
 
 # ── Credenziali (FAKE - in produzione vengono dal Cypher di Morpheus) ─────────
 # PRODUZIONE:
