@@ -88,48 +88,6 @@ $migrationServerIP = "10.182.1.11"   # REALE - non contattato in TEST_MODE
 
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# TEST CONNETTIVITÀ DISPATCHER (prima di qualsiasi tentativo di PSSession)
-# ──────────────────────────────────────────────────────────────────────────────
-Write-Output "[INFO] Test connettività verso dispatcher: $migrationServerIP ..."
-
-try {
-    # WinRM di default usa 5985 (HTTP) e/o 5986 (HTTPS).
-    # Qui testiamo entrambe le porte: basta che una risulti raggiungibile.
-    $tnc5985 = Test-NetConnection -ComputerName $migrationServerIP -Port 5985 -WarningAction SilentlyContinue
-    $tnc5986 = Test-NetConnection -ComputerName $migrationServerIP -Port 5986 -WarningAction SilentlyContinue
-
-    $ok5985 = [bool]$tnc5985.TcpTestSucceeded
-    $ok5986 = [bool]$tnc5986.TcpTestSucceeded
-
-    # (Opzionale) Ping/ICMP: può essere bloccato da firewall, quindi non lo usiamo come “verdetto”
-    $pingOk = $false
-    try {
-        $pingOk = Test-Connection -ComputerName $migrationServerIP -Count 1 -Quiet -ErrorAction Stop
-    } catch { }
-
-    Write-Output "[INFO] Ping (ICMP)          : $pingOk (può essere bloccato da firewall)"
-    Write-Output "[INFO] TCP 5985 (WinRM HTTP): $ok5985"
-    Write-Output "[INFO] TCP 5986 (WinRM HTTPS): $ok5986"
-
-    if (-not ($ok5985 -or $ok5986)) {
-        Write-Output "[ERROR] Dispatcher NON raggiungibile via WinRM (porte 5985/5986 chiuse o host non raggiungibile): $migrationServerIP"
-        # Update-MigrationStatus -Status "Failed: dispatcher non raggiungibile (WinRM 5985/5986)"
-        exit 1
-    }
-
-    Write-Output "[SUCCESS] Dispatcher raggiungibile via WinRM su " + ($(if ($ok5985) { "5985" } else { "" }) + $(if ($ok5985 -and $ok5986) { " e " } else { "" }) + $(if ($ok5986) { "5986" } else { "" }))
-
-} catch {
-    Write-Output "[ERROR] Errore durante Test-NetConnection verso dispatcher ($migrationServerIP): $($_.Exception.Message)"
-    # Update-MigrationStatus -Status "Failed: test connettività dispatcher - $($_.Exception.Message)"
-    exit 1
-}
-
-
-
-
-
 
 # ──────────────────────────────────────────────────────────────────────────────
 if ([string]::IsNullOrWhiteSpace($migrationUserRaw) -or [string]::IsNullOrWhiteSpace($migrationPassRaw)) {
