@@ -79,6 +79,9 @@ Write-Output $fromUser
 # PRODUZIONE:
 $migrationUserRaw = '<%=cypher.read("secret/EFC-TS_MIG_DANEA-USR",true)%>'
 $migrationPassRaw = '<%=cypher.read("secret/EFC-TS_MIG_DANEA-PWD",true)%>'
+
+Write-Output $migrationUserRaw
+Write-Output $migrationPassRaw
 #$migrationUserRaw = "testuser"
 #$migrationPassRaw = "testpassword"
 
