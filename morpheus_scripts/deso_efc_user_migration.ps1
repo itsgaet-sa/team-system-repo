@@ -17,8 +17,6 @@
 # ──────────────────────────────────────────────────────────────────────────────
 $TEST_MODE = $false
 
-whoami
-
 # Impostazioni runtime
 $ErrorActionPreference = "Stop"
 $ProgressPreference    = "SilentlyContinue"
@@ -90,8 +88,6 @@ $queuePath         = Join-Path $migrationBasePath "incoming"
 # ── Server dispatcher (non usato in test mode) ────────────────────────────────
 $migrationServerIP = "10.182.1.11"   # REALE - non contattato in TEST_MODE
 #$migrationServerIP = "efc-service01.ad.easyfattincloud.it"
-
-nslookup $migrationServerIP
 
 # ──────────────────────────────────────────────────────────────────────────────
 if ([string]::IsNullOrWhiteSpace($migrationUserRaw) -or [string]::IsNullOrWhiteSpace($migrationPassRaw)) {
