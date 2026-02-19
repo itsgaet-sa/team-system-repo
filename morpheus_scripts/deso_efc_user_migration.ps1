@@ -17,6 +17,7 @@
 # ──────────────────────────────────────────────────────────────────────────────
 $TEST_MODE = $false
 
+whoami
 
 # Impostazioni runtime
 $ErrorActionPreference = "Stop"
