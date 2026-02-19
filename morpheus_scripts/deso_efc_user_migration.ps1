@@ -79,8 +79,8 @@ Write-Output $fromUser
 # PRODUZIONE:
 #$migrationUserRaw = '<%=cypher.read("secret/EFC-TS_MIG_DANEA-USR",true)%>'
 $migrationUserRaw = 'ts_mig_danea@ad.easyfattincloud.it'
-$migrationPassRaw = '<%=cypher.read("secret/EFC-TS_MIG_DANEA-PWD",true)%>'
 
+$migrationPassRaw = '<%=cypher.read("secret/EFC-TS_MIG_DANEA-PWD",true)%>'
 Write-Output $migrationUserRaw
 Write-Output $migrationPassRaw
 #$migrationUserRaw = "testuser"
@@ -94,6 +94,7 @@ $queuePath         = Join-Path $migrationBasePath "incoming"
 # ── Server dispatcher (non usato in test mode) ────────────────────────────────
 #$migrationServerIP = "10.182.1.11"   # REALE - non contattato in TEST_MODE
 $migrationServerIP = "efc-service01.ad.easyfattincloud.it"
+nslookup $migrationServerIP
 
 # ──────────────────────────────────────────────────────────────────────────────
 if ([string]::IsNullOrWhiteSpace($migrationUserRaw) -or [string]::IsNullOrWhiteSpace($migrationPassRaw)) {
