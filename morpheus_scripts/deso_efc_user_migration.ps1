@@ -88,9 +88,9 @@ $migrationBasePath = Join-Path $tempRoot "migration_test"
 $queuePath         = Join-Path $migrationBasePath "incoming"
 
 # ── Server dispatcher (non usato in test mode) ────────────────────────────────
-#$migrationServerIP = "10.182.1.11"   # REALE - non contattato in TEST_MODE
-nslookup 10.182.1.11
-$migrationServerIP = "efc-service01"
+$migrationServerIP = "10.182.1.11"   # REALE - non contattato in TEST_MODE
+#nslookup 10.182.1.11
+#$migrationServerIP = "efc-service01"
 
 # ──────────────────────────────────────────────────────────────────────────────
 if ([string]::IsNullOrWhiteSpace($migrationUserRaw) -or [string]::IsNullOrWhiteSpace($migrationPassRaw)) {
