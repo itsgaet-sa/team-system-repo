@@ -75,8 +75,8 @@ $instanceId      = "<%=instance.id%>"
 # ── Credenziali (FAKE - in produzione vengono dal Cypher di Morpheus) ─────────
 # PRODUZIONE:
 #$migrationUserRaw = '<%=cypher.read("secret/EFC-TS_MIG_DANEA-USR",true)%>'
-$migrationUserRaw = 'ts_mig_danea@ad.easyfattincloud.it'
-
+#$migrationUserRaw = 'ts_mig_danea@ad.easyfattincloud.it'
+$migrationUserRaw = 'ad\ts_mig_danea'
 $migrationPassRaw = '<%=cypher.read("secret/EFC-TS_MIG_DANEA-PWD",true)%>'
 #$migrationUserRaw = "testuser"
 #$migrationPassRaw = "testpassword"
@@ -156,9 +156,8 @@ if ($TEST_MODE) {
         $session = New-PSSession `
             -HostName $migrationServerIP `
             -UserName $migrationUserRaw `
-            -SSHTransport `
             -Credential $migrationCred `
-            -Port 22 `
+            -SSHTransport `
             -ErrorAction Stop
         Write-Output "[SUCCESS] Sessione remota stabilita con $migrationServerIP"
     } catch {
