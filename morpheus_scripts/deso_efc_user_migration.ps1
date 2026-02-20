@@ -20,7 +20,6 @@ $TEST_MODE = $false
 # Impostazioni runtime
 $ErrorActionPreference = "Stop"
 $ProgressPreference    = "SilentlyContinue"
-$PSVersionTable.PSVersion
 
 # ──────────────────────────────────────────────────────────────────────────────
 # FUNZIONI DI SUPPORTO
