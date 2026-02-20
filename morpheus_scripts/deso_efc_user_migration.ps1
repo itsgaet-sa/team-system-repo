@@ -76,7 +76,7 @@ $instanceId      = "<%=instance.id%>"
 # PRODUZIONE:
 #$migrationUserRaw = '<%=cypher.read("secret/EFC-TS_MIG_DANEA-USR",true)%>'
 #$migrationUserRaw = 'ts_mig_danea@ad.easyfattincloud.it'
-$migrationUserRaw = 'ad\ts_mig_danea'
+$migrationUserRaw = 'ts_mig_danea'
 $migrationPassRaw = '<%=cypher.read("secret/EFC-TS_MIG_DANEA-PWD",true)%>'
 #$migrationUserRaw = "testuser"
 #$migrationPassRaw = "testpassword"
