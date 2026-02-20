@@ -152,7 +152,7 @@ if ($TEST_MODE) {
     Write-Output "[INFO] Connessione al server dispatcher ($migrationServerIP) in corso..."
     $session = $null
     try {
-        $session = New-PSSession -ComputerName $migrationServerIP -Credential $migrationCred -Authentication Negotiate -ErrorAction Stop
+        $session = New-PSSession -ComputerName $migrationServerIP -Credential $migrationCred -SSHTransport -ErrorAction Stop
         Write-Output "[SUCCESS] Sessione remota stabilita con $migrationServerIP"
     } catch {
         Write-Output "[ERROR] Impossibile connettersi al server dispatcher ($migrationServerIP)"
