@@ -154,11 +154,10 @@ if ($TEST_MODE) {
     $session = $null
     try {
         $session = New-PSSession `
-            -HostName $migrationServerIP `
-            -UserName $migrationUserRaw `
-            -Credential $migrationCred `
-            -SSHTransport `
-            -ErrorAction Stop
+    -HostName $migrationServerIP `
+    -Credential $migrationCred `
+    -SSHTransport `
+    -ErrorAction Stop
         Write-Output "[SUCCESS] Sessione remota stabilita con $migrationServerIP"
     } catch {
         Write-Output "[ERROR] Impossibile connettersi al server dispatcher ($migrationServerIP)"
