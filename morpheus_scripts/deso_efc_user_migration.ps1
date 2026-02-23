@@ -77,9 +77,9 @@ $migrationPwdRaw  = '<%=cypher.read("secret/EFC-TS_MIG_DANEA-PWD",true)%>'
 # ──────────────────────────────────────────────────────────────────────────────
 # PATH REMOTI SUL DISPATCHER
 # ──────────────────────────────────────────────────────────────────────────────
-$migrationServerIP = "10.182.1.11"
-$remoteQueuePath   = "D:\tools\migration\incoming"
-$remoteDispatcher  = "D:\tools\migration\dispatcher.ps1"
+$migrationServerName = "EFC-SERVICE01"
+$remoteQueuePath     = "D:\tools\migration\incoming"
+$remoteDispatcher    = "D:\tools\migration\dispatcher.ps1"
 
 # ──────────────────────────────────────────────────────────────────────────────
 # INIZIO SCRIPT
@@ -135,14 +135,15 @@ Write-Output "[INFO] =========================================="
 # ──────────────────────────────────────────────────────────────────────────────
 $session = $null
 
-Write-Output "[INFO] Connessione remota al dispatcher ($migrationServerIP) via WinRM con credenziali..."
+Write-Output "[INFO] Connessione remota al dispatcher ($migrationServerName) via WinRM con credenziali..."
 try {
     $session = New-PSSession `
-        -ComputerName $migrationServerIP `
+        -ComputerName $migrationServerName `
         -Credential   $sshCred `
+        -Authentication Negotiate `
         -ErrorAction  Stop
 
-    Write-Output "[SUCCESS] Sessione remota stabilita con $migrationServerIP"
+    Write-Output "[SUCCESS] Sessione remota stabilita con $migrationServerName"
 } catch {
     Write-Output "[ERROR] Impossibile connettersi al dispatcher via WinRM: $($_.Exception.Message)"
     Update-MigrationStatus -Status "Failed"
