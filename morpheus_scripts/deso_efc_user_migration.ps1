@@ -143,6 +143,9 @@ try {
     $tempKeyPath = Join-Path $tempRoot "ssh_key_$([System.Guid]::NewGuid().ToString('N'))"
     Set-Content -Path $tempKeyPath -Value $migrationPassRaw -NoNewline -Encoding ASCII
 
+    # Su Linux i permessi della chiave devono essere 600 altrimenti SSH la rifiuta
+    chmod 600 $tempKeyPath
+
     $session = New-PSSession `
         -HostName    $migrationServerIP `
         -Username    $migrationUserRaw `
