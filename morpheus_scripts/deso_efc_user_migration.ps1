@@ -75,7 +75,6 @@ $migrationPassRaw = '<%=cypher.read("secret/EFC-TS_MIG_DANEA_SSH",true)%>'
 $migrationServerIP = "10.182.1.11"
 $remoteQueuePath   = "D:\tools\migration\incoming"
 $remoteDispatcher  = "D:\tools\migration\dispatcher.ps1"
-$tempRoot          = [System.IO.Path]::GetTempPath().TrimEnd('\', '/')
 
 # ──────────────────────────────────────────────────────────────────────────────
 # INIZIO SCRIPT
@@ -129,7 +128,6 @@ Write-Output "[INFO] =========================================="
 # CONNESSIONE SSH AL DISPATCHER
 # ──────────────────────────────────────────────────────────────────────────────
 $session     = $null
-$tempKeyPath = $null
 
 # ── DA RIMUOVERE DOPO LA PRIMA ESECUZIONE ────────────────────────────────────
 $knownHostsFile = Join-Path $HOME ".ssh" "known_hosts"
@@ -140,16 +138,10 @@ Write-Output "[INFO] Chiave host registrata: $knownHostsFile"
 
 Write-Output "[INFO] Connessione SSH al dispatcher ($migrationServerIP)..."
 try {
-    $tempKeyPath = Join-Path $tempRoot "ssh_key_$([System.Guid]::NewGuid().ToString('N'))"
-    Set-Content -Path $tempKeyPath -Value $migrationPassRaw -NoNewline -Encoding ASCII
-
-    # Su Linux i permessi della chiave devono essere 600 altrimenti SSH la rifiuta
-    chmod 600 $tempKeyPath
-
+    # Il Cypher contiene una password, non una chiave PEM → autenticazione con -Credential
     $session = New-PSSession `
         -HostName    $migrationServerIP `
-        -Username    $migrationUserRaw `
-        -KeyFilePath $tempKeyPath `
+        -Credential  $migrationCred `
         -SSHTransport `
         -ErrorAction Stop
 
@@ -158,11 +150,6 @@ try {
     Write-Output "[ERROR] Impossibile connettersi al dispatcher: $($_.Exception.Message)"
     Update-MigrationStatus -Status "Failed"
     exit 1
-} finally {
-    # Rimozione immediata della chiave temporanea dal disco
-    if ($tempKeyPath -and (Test-Path $tempKeyPath)) {
-        Remove-Item $tempKeyPath -Force -ErrorAction SilentlyContinue
-    }
 }
 
 # ──────────────────────────────────────────────────────────────────────────────
