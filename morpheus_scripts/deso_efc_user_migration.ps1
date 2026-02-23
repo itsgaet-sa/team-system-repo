@@ -77,8 +77,8 @@ $migrationKeyBase64 = '<%=cypher.read("secret/EFC-TS_MIG_DANEA_SSH",true)%>'
 # PATH REMOTI SUL DISPATCHER
 # ──────────────────────────────────────────────────────────────────────────────
 $migrationServerIP = "10.182.1.11"
-$remoteQueuePath   = "D:\tools\migration\incoming"
-$remoteDispatcher  = "D:\tools\migration\dispatcher.ps1"
+$remoteQueuePath   = "D:\tools\migration-tool\incoming"
+$remoteDispatcher  = "D:\tools\migration-tool\dispatcher.ps1"
 
 # ──────────────────────────────────────────────────────────────────────────────
 # INIZIO SCRIPT
