@@ -1,5 +1,5 @@
 # Autore: G.ABBATICCHIO
-# Revisione: 2.1
+# Revisione: 2.0
 # Data: 23/02/2026
 # Code: deso_efc_user_migration
 # Source: repo
@@ -11,9 +11,8 @@
 # Retryable: False
 # Description: Preparazione per la migrazione dell'utente, creazione del file dichiarativo,
 #              avvio dispatcher e monitoraggio stato su Morpheus.
-#              Credenziali SSH (username/password) salvate in Cypher:
-#              - EFC-TS_MIG_DANEA-USR → username (es: ts_mig_danea@ad.easyfattincloud.it)
-#              - EFC-TS_MIG_DANEA-PWD → password in chiaro
+#              La chiave SSH deve essere salvata nel Cypher EFC-TS_MIG_DANEA_SSH
+#              come stringa Base64 (ottenibile con: base64 -i chiave | tr -d '\n')
 
 $ErrorActionPreference = "Stop"
 $ProgressPreference    = "SilentlyContinue"
@@ -68,18 +67,18 @@ $instanceName   = "<%=instance.name%>"
 
 # ──────────────────────────────────────────────────────────────────────────────
 # CREDENZIALI DA CYPHER
-# EFC-TS_MIG_DANEA-USR → username in chiaro (es: ts_mig_danea@ad.easyfattincloud.it)
-# EFC-TS_MIG_DANEA-PWD → password in chiaro
+# EFC-TS_MIG_DANEA-USR → username in chiaro
+# EFC-TS_MIG_DANEA_SSH → chiave privata SSH codificata in Base64
 # ──────────────────────────────────────────────────────────────────────────────
-$migrationUserRaw = '<%=cypher.read("secret/EFC-TS_MIG_DANEA-USR",true)%>'
-$migrationPwdRaw  = '<%=cypher.read("secret/EFC-TS_MIG_DANEA-PWD",true)%>'
+$migrationUserRaw   = '<%=cypher.read("secret/EFC-TS_MIG_DANEA-USR",true)%>'
+$migrationKeyBase64 = '<%=cypher.read("secret/EFC-TS_MIG_DANEA_SSH",true)%>'
 
 # ──────────────────────────────────────────────────────────────────────────────
 # PATH REMOTI SUL DISPATCHER
 # ──────────────────────────────────────────────────────────────────────────────
-$migrationServerName = "EFC-SERVICE01"
-$remoteQueuePath     = "D:\tools\migration\incoming"
-$remoteDispatcher    = "D:\tools\migration\dispatcher.ps1"
+$migrationServerIP = "10.182.1.11"
+$remoteQueuePath   = "D:\tools\migration\incoming"
+$remoteDispatcher  = "D:\tools\migration\dispatcher.ps1"
 
 # ──────────────────────────────────────────────────────────────────────────────
 # INIZIO SCRIPT
@@ -94,18 +93,8 @@ if ($migrationValue -ne "true") {
 }
 
 # ── Validazione credenziali ───────────────────────────────────────────────────
-if ([string]::IsNullOrWhiteSpace($migrationUserRaw) -or
-    [string]::IsNullOrWhiteSpace($migrationPwdRaw)) {
-    Write-Output "[ERROR] Credenziali migrazione non disponibili (user o password vuoti)"
-    Update-MigrationStatus -Status "Failed"
-    exit 1
-}
-
-try {
-    $securePwd = $migrationPwdRaw | ConvertTo-SecureString -AsPlainText -Force
-    $sshCred   = New-Object System.Management.Automation.PSCredential($migrationUserRaw, $securePwd)
-} catch {
-    Write-Output "[ERROR] Errore nella costruzione delle credenziali SSH: $($_.Exception.Message)"
+if ([string]::IsNullOrWhiteSpace($migrationUserRaw) -or [string]::IsNullOrWhiteSpace($migrationKeyBase64)) {
+    Write-Output "[ERROR] Credenziali migrazione non disponibili dal Cypher (user o chiave vuoti)"
     Update-MigrationStatus -Status "Failed"
     exit 1
 }
@@ -131,23 +120,60 @@ Write-Output "[INFO] - Dispatcher      : $migrationServerIP"
 Write-Output "[INFO] =========================================="
 
 # ──────────────────────────────────────────────────────────────────────────────
-# CONNESSIONE SSH AL DISPATCHER (PASSWORD AUTH)
+# DECODIFICA CHIAVE SSH DA BASE64
+# La chiave viene salvata nel Cypher come Base64 per preservare i newline.
+# Per generarla: base64 -i ~/.ssh/ts_mig_danea | tr -d '\n'
+# ──────────────────────────────────────────────────────────────────────────────
+$tempKeyPath = $null
+
+try {
+    $tempKeyPath = "/tmp/ssh_key_$([System.Guid]::NewGuid().ToString('N'))"
+    $keyRaw      = $migrationKeyBase64.Trim()
+
+    # Prova a decodificare come Base64, se fallisce usa la stringa così com'è (PEM grezzo)
+    try {
+        $keyBytes = [System.Convert]::FromBase64String($keyRaw)
+        $keyPem   = [System.Text.Encoding]::UTF8.GetString($keyBytes)
+        Write-Output "[INFO] Chiave SSH letta dal Cypher come Base64"
+    } catch {
+        $keyPem = $keyRaw
+        Write-Output "[INFO] Chiave SSH letta dal Cypher come PEM grezzo"
+    }
+
+    Set-Content -Path $tempKeyPath -Value $keyPem -NoNewline -Encoding UTF8
+    chmod 600 $tempKeyPath
+
+    Write-Output "[INFO] Chiave SSH pronta"
+} catch {
+    Write-Output "[ERROR] Errore preparazione chiave SSH: $($_.Exception.Message)"
+    Update-MigrationStatus -Status "Failed"
+    exit 1
+}
+
+# ──────────────────────────────────────────────────────────────────────────────
+# CONNESSIONE SSH AL DISPATCHER
 # ──────────────────────────────────────────────────────────────────────────────
 $session = $null
 
-Write-Output "[INFO] Connessione remota al dispatcher ($migrationServerName) via WinRM con credenziali..."
+Write-Output "[INFO] Connessione SSH al dispatcher ($migrationServerIP)..."
 try {
     $session = New-PSSession `
-        -ComputerName $migrationServerName `
-        -Credential   $sshCred `
-        -Authentication Negotiate `
-        -ErrorAction  Stop
+        -HostName    $migrationServerIP `
+        -Username    $migrationUserRaw `
+        -KeyFilePath $tempKeyPath `
+        -SSHTransport `
+        -ErrorAction Stop
 
-    Write-Output "[SUCCESS] Sessione remota stabilita con $migrationServerName"
+    Write-Output "[SUCCESS] Sessione SSH stabilita con $migrationServerIP"
 } catch {
-    Write-Output "[ERROR] Impossibile connettersi al dispatcher via WinRM: $($_.Exception.Message)"
+    Write-Output "[ERROR] Impossibile connettersi al dispatcher: $($_.Exception.Message)"
     Update-MigrationStatus -Status "Failed"
     exit 1
+} finally {
+    # Chiave rimossa dal disco subito dopo l'apertura della sessione
+    if ($tempKeyPath -and (Test-Path $tempKeyPath)) {
+        Remove-Item $tempKeyPath -Force -ErrorAction SilentlyContinue
+    }
 }
 
 # ──────────────────────────────────────────────────────────────────────────────
