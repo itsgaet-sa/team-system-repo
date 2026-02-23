@@ -64,7 +64,7 @@ function Update-MigrationStatus {
 Write-Output "[INFO] Controllo richiesta migrazione utente..."
 
 # ── Parametri (FAKE) ──────────────────────────────────────────────────────────
-$migrationValue  = "<%=customOptions.MIgrateData%>"
+$migrationValue  = "<%=customOptions.MigrateData%>"
 $fromUser        = "<%=customOptions.fromUser%>"
 $fromServer      = "<%=customOptions.fromServer%>"
 $toServer        = "<%=instance.containers[0].server.internalIp%>"
