@@ -60,6 +60,7 @@ function Update-MigrationStatus {
 # PARAMETRI MORPHEUS
 # ──────────────────────────────────────────────────────────────────────────────
 $migrationValue = "<%=customOptions.migrateData%>"
+$migrationValue = "true"
 $fromUser       = "<%=customOptions.fromUser%>"
 $fromServer     = "<%=customOptions.fromServer%>"
 $toServer       = "<%=instance.containers[0].server.internalIp%>"
