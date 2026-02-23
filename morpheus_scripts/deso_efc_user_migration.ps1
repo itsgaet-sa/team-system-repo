@@ -304,7 +304,7 @@ $dispatcherBlock = {
     }
     Write-Output "[REMOTE][INFO] Avvio: $dispatcherScript"
     try {
-        & $dispatcherScript
+        .\$dispatcherScript
         Write-Output "[REMOTE][SUCCESS] Dispatcher eseguito correttamente"
     } catch {
         throw "Errore durante l'esecuzione del dispatcher: $($_.Exception.Message)"
