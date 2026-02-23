@@ -153,7 +153,7 @@ if ($TEST_MODE) {
     Write-Output "[INFO] Connessione al server dispatcher ($migrationServerIP) in corso..."
     $session = $null
     try {
-    $tempKeyPath = "$env:TEMP\temp_ssh_key"
+    $tempKeyPath = "$tempRoot\temp_ssh_key"
     Set-Content -Path $tempKeyPath -Value $migrationPassRaw -NoNewline
         $session = New-PSSession `
     -HostName $migrationServerIP `
