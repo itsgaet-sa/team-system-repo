@@ -70,7 +70,7 @@ $instanceName   = "<%=instance.name%>"
 # EFC-TS_MIG_DANEA-USR → username in chiaro
 # EFC-TS_MIG_DANEA_SSH → chiave privata SSH codificata in Base64
 # ──────────────────────────────────────────────────────────────────────────────
-$migrationUserRaw   = '<%=cypher.read("secret/EFC-TS_MIG_DANEA-USR",true)%>'
+$migrationUserRaw = 'ts_mig_danea@ad.easyfattincloud.it'
 $migrationKeyBase64 = '<%=cypher.read("secret/EFC-TS_MIG_DANEA_SSH",true)%>'
 
 # ──────────────────────────────────────────────────────────────────────────────
