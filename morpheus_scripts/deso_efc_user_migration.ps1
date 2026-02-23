@@ -221,13 +221,13 @@ $createQueueBlock = {
 
     try {
         # Calcolo prossima sequenza
-        $existingFiles = Get-ChildItem -Path $queuePath -Filter "migra_*.txt" -ErrorAction SilentlyContinue |
-            Where-Object { $_.Name -match 'migra_(\d+)\.txt' } |
+        $existingFiles = Get-ChildItem -Path $queuePath -Filter "migra-*.txt" -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -match 'migra-(\d+)\.txt' } |
             ForEach-Object { [int]($Matches[1]) } |
             Sort-Object -Descending
 
         $nextSequence  = if ($existingFiles) { $existingFiles[0] + 1 } else { 1 }
-        $queueFileName = "migra_{0:D6}.txt" -f $nextSequence
+        $queueFileName = "migra-{0:D6}.txt" -f $nextSequence
         $queueFilePath = Join-Path $queuePath $queueFileName
         $queueContent  = "${fromUser}|${fromServer}|${toServer}"
 
