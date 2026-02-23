@@ -135,17 +135,16 @@ Write-Output "[INFO] =========================================="
 # ──────────────────────────────────────────────────────────────────────────────
 $session = $null
 
-Write-Output "[INFO] Connessione SSH al dispatcher ($migrationServerIP) con credenziali..."
+Write-Output "[INFO] Connessione remota al dispatcher ($migrationServerIP) via WinRM con credenziali..."
 try {
     $session = New-PSSession `
-        -HostName   $migrationServerIP `
-        -Credential $sshCred `
-        -SSHTransport `
-        -ErrorAction Stop
+        -ComputerName $migrationServerIP `
+        -Credential   $sshCred `
+        -ErrorAction  Stop
 
-    Write-Output "[SUCCESS] Sessione SSH stabilita con $migrationServerIP"
+    Write-Output "[SUCCESS] Sessione remota stabilita con $migrationServerIP"
 } catch {
-    Write-Output "[ERROR] Impossibile connettersi al dispatcher: $($_.Exception.Message)"
+    Write-Output "[ERROR] Impossibile connettersi al dispatcher via WinRM: $($_.Exception.Message)"
     Update-MigrationStatus -Status "Failed"
     exit 1
 }
