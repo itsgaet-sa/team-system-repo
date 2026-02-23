@@ -1,21 +1,16 @@
 # Autore: G.ABBATICCHIO
-# Revisione: 1.8
+# Revisione: 1.9
 # Data: 23/02/2026
 # Code: deso_efc_user_migration
 # Source: repo
 # Result Type: none
 # Elevated Shell: True
-# Execute Target: Resource (LOCAL SIMULATION)
+# Execute Target: Resource
 # Visibility: Public
 # Continue on error: False
 # Retryable: False
-# Description: Preparazione per la migrazione dell'utente, creazione del file dichiarativo.
-#              TEST_MODE = $true  → tutto locale, nessuna connessione remota
-#              TEST_MODE = $false → PSSession SSH reale verso il dispatcher
-
-# ──────────────────────────────────────────────────────────────────────────────
-$TEST_MODE = $true
-# ──────────────────────────────────────────────────────────────────────────────
+# Description: Preparazione per la migrazione dell'utente, creazione del file dichiarativo,
+#              avvio dispatcher e monitoraggio stato su Morpheus.
 
 $ErrorActionPreference = "Stop"
 $ProgressPreference    = "SilentlyContinue"
@@ -32,7 +27,7 @@ function Write-RemoteLog {
 
 function Update-MigrationStatus {
     param(
-        [ValidateSet("Pending","Completed","Failed")]
+        [ValidateSet("Pending", "Completed", "Failed")]
         [string]$Status
     )
     try {
@@ -69,40 +64,24 @@ $toServer       = "<%=instance.containers[0].server.internalIp%>"
 $instanceName   = "<%=instance.name%>"
 
 # ──────────────────────────────────────────────────────────────────────────────
-# CREDENZIALI
+# CREDENZIALI DA CYPHER
 # ──────────────────────────────────────────────────────────────────────────────
 $migrationUserRaw = '<%=cypher.read("secret/EFC-TS_MIG_DANEA-USR",true)%>'
 $migrationPassRaw = '<%=cypher.read("secret/EFC-TS_MIG_DANEA_SSH",true)%>'
 
-# Valori di fallback solo in TEST_MODE
-if ($TEST_MODE) {
-    if ([string]::IsNullOrWhiteSpace($migrationUserRaw)) { $migrationUserRaw = "ts_mig_danea@ad.easyfattincloud.it" }
-    if ([string]::IsNullOrWhiteSpace($migrationPassRaw)) { $migrationPassRaw = "testpassword" }
-    if ([string]::IsNullOrWhiteSpace($fromUser))         { $fromUser         = "utente.test" }
-    if ([string]::IsNullOrWhiteSpace($fromServer))       { $fromServer       = "server-origine-test" }
-    if ([string]::IsNullOrWhiteSpace($toServer))         { $toServer         = "server-destino-test" }
-    if ([string]::IsNullOrWhiteSpace($migrationValue))   { $migrationValue   = "true" }
-}
-
 # ──────────────────────────────────────────────────────────────────────────────
-# PATH
+# PATH REMOTI SUL DISPATCHER
 # ──────────────────────────────────────────────────────────────────────────────
-$migrationServerIP  = "10.182.1.11"
-$remoteQueuePath    = "D:\tools\migration\incoming"   # usato in produzione
-$remoteDispatcher   = "D:\tools\migration\dispatcher.ps1"
-
-$tempRoot           = [System.IO.Path]::GetTempPath().TrimEnd('\','/')
-$migrationBasePath  = Join-Path $tempRoot "migration_test"
-$localQueuePath     = Join-Path $migrationBasePath "incoming"
-
-# In TEST_MODE il queuePath effettivo è locale, in produzione remoto
-$effectiveQueuePath = if ($TEST_MODE) { $localQueuePath } else { $remoteQueuePath }
+$migrationServerIP = "10.182.1.11"
+$remoteQueuePath   = "D:\tools\migration\incoming"
+$remoteDispatcher  = "D:\tools\migration\dispatcher.ps1"
+$tempRoot          = [System.IO.Path]::GetTempPath().TrimEnd('\', '/')
 
 # ──────────────────────────────────────────────────────────────────────────────
 # INIZIO SCRIPT
 # ──────────────────────────────────────────────────────────────────────────────
-Write-Output "[INFO] Istanza      : $instanceName"
-Write-Output "[INFO] MigrateData  : '$migrationValue'"
+Write-Output "[INFO] Istanza     : $instanceName"
+Write-Output "[INFO] MigrateData : '$migrationValue'"
 
 if ($migrationValue -ne "true") {
     Write-Output "[INFO] Migrazione NON richiesta - Skip"
@@ -112,7 +91,7 @@ if ($migrationValue -ne "true") {
 
 # ── Validazione credenziali ───────────────────────────────────────────────────
 if ([string]::IsNullOrWhiteSpace($migrationUserRaw) -or [string]::IsNullOrWhiteSpace($migrationPassRaw)) {
-    Write-Output "[ERROR] Credenziali migrazione non disponibili (user o password vuoti)"
+    Write-Output "[ERROR] Credenziali migrazione non disponibili dal Cypher (user o password vuoti)"
     Update-MigrationStatus -Status "Failed"
     exit 1
 }
@@ -128,9 +107,9 @@ try {
 
 # ── Validazione parametri obbligatori ────────────────────────────────────────
 $validationErrors = @()
-if ([string]::IsNullOrWhiteSpace($fromUser))  { $validationErrors += "fromUser mancante" }
-if ([string]::IsNullOrWhiteSpace($fromServer)){ $validationErrors += "fromServer mancante" }
-if ([string]::IsNullOrWhiteSpace($toServer))  { $validationErrors += "toServer non valorizzato" }
+if ([string]::IsNullOrWhiteSpace($fromUser))   { $validationErrors += "fromUser mancante" }
+if ([string]::IsNullOrWhiteSpace($fromServer)) { $validationErrors += "fromServer mancante" }
+if ([string]::IsNullOrWhiteSpace($toServer))   { $validationErrors += "toServer non valorizzato" }
 
 if ($validationErrors.Count -gt 0) {
     foreach ($e in $validationErrors) { Write-Output "[ERROR] $e" }
@@ -140,48 +119,44 @@ if ($validationErrors.Count -gt 0) {
 
 Write-Output "[INFO] =========================================="
 Write-Output "[INFO] MIGRAZIONE RICHIESTA - Avvio processo"
-Write-Output "[INFO] - Utente origine   : $fromUser"
-Write-Output "[INFO] - Server origine   : $fromServer"
-Write-Output "[INFO] - Server destino   : $toServer"
-Write-Output "[INFO] - Dispatcher       : $migrationServerIP$(if ($TEST_MODE) { ' (SIMULATO)' })"
+Write-Output "[INFO] - Utente origine  : $fromUser"
+Write-Output "[INFO] - Server origine  : $fromServer"
+Write-Output "[INFO] - Server destino  : $toServer"
+Write-Output "[INFO] - Dispatcher      : $migrationServerIP"
 Write-Output "[INFO] =========================================="
 
 # ──────────────────────────────────────────────────────────────────────────────
-# CONNESSIONE AL DISPATCHER (solo in produzione)
+# CONNESSIONE SSH AL DISPATCHER
 # ──────────────────────────────────────────────────────────────────────────────
 $session     = $null
 $tempKeyPath = $null
 
-if (-not $TEST_MODE) {
-    Write-Output "[INFO] Connessione SSH al dispatcher ($migrationServerIP)..."
-    try {
-        $tempKeyPath = Join-Path $tempRoot "temp_ssh_key_$([System.Guid]::NewGuid().ToString('N'))"
-        Set-Content -Path $tempKeyPath -Value $migrationPassRaw -NoNewline -Encoding ASCII
+Write-Output "[INFO] Connessione SSH al dispatcher ($migrationServerIP)..."
+try {
+    $tempKeyPath = Join-Path $tempRoot "ssh_key_$([System.Guid]::NewGuid().ToString('N'))"
+    Set-Content -Path $tempKeyPath -Value $migrationPassRaw -NoNewline -Encoding ASCII
 
-        $session = New-PSSession `
-            -HostName    $migrationServerIP `
-            -Username    $migrationUserRaw `
-            -KeyFilePath $tempKeyPath `
-            -SSHTransport `
-            -ErrorAction Stop
+    $session = New-PSSession `
+        -HostName    $migrationServerIP `
+        -Username    $migrationUserRaw `
+        -KeyFilePath $tempKeyPath `
+        -SSHTransport `
+        -ErrorAction Stop
 
-        Write-Output "[SUCCESS] Sessione SSH stabilita con $migrationServerIP"
-    } catch {
-        Write-Output "[ERROR] Impossibile connettersi al dispatcher: $($_.Exception.Message)"
-        Update-MigrationStatus -Status "Failed"
-        exit 1
-    } finally {
-        # La chiave viene rimossa subito dopo l'apertura della sessione
-        if ($tempKeyPath -and (Test-Path $tempKeyPath)) {
-            Remove-Item $tempKeyPath -Force -ErrorAction SilentlyContinue
-        }
+    Write-Output "[SUCCESS] Sessione SSH stabilita con $migrationServerIP"
+} catch {
+    Write-Output "[ERROR] Impossibile connettersi al dispatcher: $($_.Exception.Message)"
+    Update-MigrationStatus -Status "Failed"
+    exit 1
+} finally {
+    # Rimozione immediata della chiave temporanea dal disco
+    if ($tempKeyPath -and (Test-Path $tempKeyPath)) {
+        Remove-Item $tempKeyPath -Force -ErrorAction SilentlyContinue
     }
-} else {
-    Write-Output "[TEST] Connessione SSH simulata - nessuna PSSession aperta"
 }
 
 # ──────────────────────────────────────────────────────────────────────────────
-# BLOCCO: CREAZIONE FILE DI CODA
+# BLOCCO REMOTO: CREAZIONE FILE DI CODA
 # ──────────────────────────────────────────────────────────────────────────────
 $createQueueBlock = {
     param($fromUser, $fromServer, $toServer, $queuePath)
@@ -238,21 +213,20 @@ $createQueueBlock = {
         Write-Output "[REMOTE][INFO] Sequenza: $nextSequence → $queueFileName"
 
         Set-Content -Path $queueFilePath -Value $queueContent -Force -ErrorAction Stop
-        Write-Output "[REMOTE][INFO] Contenuto scritto: $queueContent"
+        Write-Output "[REMOTE][INFO] Contenuto: $queueContent"
 
         if (-not (Test-Path $queueFilePath)) {
-            throw "Il file '$queueFilePath' non trovato dopo la creazione"
+            throw "File '$queueFilePath' non trovato dopo la creazione"
         }
 
         $fileSize = (Get-Item $queueFilePath).Length
         Write-Output "[REMOTE][SUCCESS] File creato ($fileSize byte): $queueFilePath"
 
-        # Restituzione tramite oggetto PSCustomObject (sopravvive alla deserializzazione remota)
         return [PSCustomObject]@{
-            FilePath  = $queueFilePath
-            FileName  = $queueFileName
-            Sequence  = $nextSequence
-            Status    = "Success"
+            FilePath = $queueFilePath
+            FileName = $queueFileName
+            Sequence = $nextSequence
+            Status   = "Success"
         }
     } finally {
         if ($lockHandle) { $lockHandle.Close(); $lockHandle.Dispose() }
@@ -263,27 +237,21 @@ $createQueueBlock = {
     }
 }
 
-# ── Esecuzione creazione file ─────────────────────────────────────────────────
-Write-Output "[INFO] Creazione file di coda in corso..."
+Write-Output "[INFO] Creazione file di coda sul dispatcher..."
 
 try {
-    if ($TEST_MODE) {
-        $rawOutput = & $createQueueBlock $fromUser $fromServer $toServer $effectiveQueuePath
-    } else {
-        $rawOutput = Invoke-Command -Session $session -ScriptBlock $createQueueBlock `
-                     -ArgumentList $fromUser, $fromServer, $toServer, $effectiveQueuePath `
-                     -ErrorAction Stop
-    }
+    $rawOutput = Invoke-Command -Session $session -ScriptBlock $createQueueBlock `
+                 -ArgumentList $fromUser, $fromServer, $toServer, $remoteQueuePath `
+                 -ErrorAction Stop
 
     Write-RemoteLog -RemoteOutput ($rawOutput | Where-Object { $_ -is [string] })
 
-    # PSCustomObject sopravvive alla deserializzazione (a differenza di [hashtable])
     $result = $rawOutput | Where-Object { $_ -isnot [string] } | Select-Object -Last 1
 
     if (-not $result -or $result.Status -ne "Success") {
         Write-Output "[ERROR] Il blocco remoto non ha restituito un risultato valido"
         Update-MigrationStatus -Status "Failed"
-        if ($session) { Remove-PSSession -Session $session -ErrorAction SilentlyContinue }
+        Remove-PSSession -Session $session -ErrorAction SilentlyContinue
         exit 1
     }
 
@@ -292,80 +260,63 @@ try {
 } catch {
     Write-Output "[ERROR] Errore durante la creazione del file di coda: $($_.Exception.Message)"
     Update-MigrationStatus -Status "Failed"
-    if ($session) { Remove-PSSession -Session $session -ErrorAction SilentlyContinue }
+    Remove-PSSession -Session $session -ErrorAction SilentlyContinue
     exit 1
 }
 
 $queueFileName     = $result.FileName
 $queueFileBaseName = [System.IO.Path]::GetFileNameWithoutExtension($queueFileName)
 
-# Imposta subito lo stato Pending — il file è in coda
+# File in coda → stato Pending
 Update-MigrationStatus -Status "Pending"
 
 # ──────────────────────────────────────────────────────────────────────────────
-# AVVIO DISPATCHER
+# BLOCCO REMOTO: AVVIO DISPATCHER
 # ──────────────────────────────────────────────────────────────────────────────
-Write-Output "[INFO] Avvio dispatcher..."
+Write-Output "[INFO] Avvio dispatcher sul server remoto..."
 
-if ($TEST_MODE) {
-    # Job background che simula: .txt → .work (dopo 2s) → .done (dopo altri 2s)
-    $null = Start-Job -ScriptBlock {
-        param($qPath, $baseName, $fileName)
-        $txtFile  = Join-Path $qPath $fileName
-        $workFile = Join-Path $qPath "$baseName.work"
-        $doneFile = Join-Path $qPath "$baseName.done"
-
-        Start-Sleep -Seconds 2
-        if (Test-Path $txtFile)  { Rename-Item -Path $txtFile  -NewName "$baseName.work" }
-        Start-Sleep -Seconds 2
-        if (Test-Path $workFile) { Rename-Item -Path $workFile -NewName "$baseName.done" }
-    } -ArgumentList $effectiveQueuePath, $queueFileBaseName, $queueFileName
-
-    Write-Output "[TEST] Dispatcher simulato avviato (completamento atteso in ~4 secondi)"
-
-} else {
-    $dispatcherBlock = {
-        param($dispatcherScript)
-        if (-not (Test-Path $dispatcherScript)) {
-            throw "Script dispatcher non trovato: $dispatcherScript"
-        }
-        Write-Output "[REMOTE][INFO] Avvio: $dispatcherScript"
-        try {
-            & $dispatcherScript
-            Write-Output "[REMOTE][SUCCESS] Dispatcher eseguito"
-        } catch {
-            throw "Errore dispatcher: $($_.Exception.Message)"
-        }
-        return [PSCustomObject]@{ Status = "Success" }
+$dispatcherBlock = {
+    param($dispatcherScript)
+    if (-not (Test-Path $dispatcherScript)) {
+        throw "Script dispatcher non trovato: $dispatcherScript"
     }
-
+    Write-Output "[REMOTE][INFO] Avvio: $dispatcherScript"
     try {
-        $dispRaw = Invoke-Command -Session $session -ScriptBlock $dispatcherBlock `
-                   -ArgumentList $remoteDispatcher -ErrorAction Stop
-
-        Write-RemoteLog -RemoteOutput ($dispRaw | Where-Object { $_ -is [string] })
-
-        $dispResult = $dispRaw | Where-Object { $_ -isnot [string] } | Select-Object -Last 1
-        if ($dispResult -and $dispResult.Status -eq "Success") {
-            Write-Output "[SUCCESS] Dispatcher avviato correttamente"
-        } else {
-            Write-Output "[WARNING] Dispatcher avviato ma senza conferma - la migrazione rimarrà in coda"
-        }
+        & $dispatcherScript
+        Write-Output "[REMOTE][SUCCESS] Dispatcher eseguito correttamente"
     } catch {
-        Write-Output "[WARNING] Errore avvio dispatcher: $($_.Exception.Message)"
-        Write-Output "[WARNING] La migrazione resterà in coda fino al prossimo avvio del dispatcher"
+        throw "Errore durante l'esecuzione del dispatcher: $($_.Exception.Message)"
     }
+    return [PSCustomObject]@{ Status = "Success" }
+}
+
+try {
+    $dispRaw = Invoke-Command -Session $session -ScriptBlock $dispatcherBlock `
+               -ArgumentList $remoteDispatcher -ErrorAction Stop
+
+    Write-RemoteLog -RemoteOutput ($dispRaw | Where-Object { $_ -is [string] })
+
+    $dispResult = $dispRaw | Where-Object { $_ -isnot [string] } | Select-Object -Last 1
+
+    if ($dispResult -and $dispResult.Status -eq "Success") {
+        Write-Output "[SUCCESS] Dispatcher avviato correttamente"
+    } else {
+        Write-Output "[WARNING] Dispatcher avviato ma senza conferma esplicita - la migrazione rimarrà in coda"
+    }
+} catch {
+    Write-Output "[WARNING] Errore avvio dispatcher: $($_.Exception.Message)"
+    Write-Output "[WARNING] La migrazione resterà in coda fino al prossimo avvio del dispatcher"
 }
 
 # ──────────────────────────────────────────────────────────────────────────────
-# MONITORAGGIO
+# MONITORAGGIO STATO MIGRAZIONE
 # ──────────────────────────────────────────────────────────────────────────────
 Write-Output "[INFO] =========================================="
 Write-Output "[INFO] Monitoraggio migrazione in corso..."
 Write-Output "[INFO] =========================================="
 
-$monitoringMaxTime  = if ($TEST_MODE) { 60    } else { 5400 }  # 1 min test / 90 min prod
-$monitoringInterval = if ($TEST_MODE) { 3     } else { 10   }  # 3s test / 10s prod
+$monitoringMaxTime  = 5400   # 90 minuti
+$monitoringInterval = 10     # polling ogni 10 secondi
 $elapsedTime        = 0
 $migrationCompleted = $false
 $lastStatus         = ""
@@ -377,11 +328,11 @@ $monitorBlock = {
     $workFile = Join-Path $qPath "$baseName.work"
     $txtFile  = Join-Path $qPath "$baseName.txt"
 
-    if (Test-Path $doneFile) {
-        return [PSCustomObject]@{ Status = "Completed"; FilePath = $doneFile; ErrorMessage = $null }
+    if     (Test-Path $doneFile) {
+        return [PSCustomObject]@{ Status = "Completed";  FilePath = $doneFile; ErrorMessage = $null }
     } elseif (Test-Path $errFile) {
         $errMsg = Get-Content $errFile -Raw -ErrorAction SilentlyContinue
-        return [PSCustomObject]@{ Status = "Failed";    FilePath = $errFile;  ErrorMessage = $errMsg }
+        return [PSCustomObject]@{ Status = "Failed";     FilePath = $errFile;  ErrorMessage = $errMsg }
     } elseif (Test-Path $workFile) {
         return [PSCustomObject]@{ Status = "Processing"; FilePath = $workFile; ErrorMessage = $null }
     } elseif (Test-Path $txtFile) {
@@ -393,12 +344,8 @@ $monitorBlock = {
 
 while ($elapsedTime -lt $monitoringMaxTime -and -not $migrationCompleted) {
     try {
-        $fileStatus = if ($TEST_MODE) {
-            & $monitorBlock $queueFileBaseName $effectiveQueuePath
-        } else {
-            Invoke-Command -Session $session -ScriptBlock $monitorBlock `
-                           -ArgumentList $queueFileBaseName, $remoteQueuePath -ErrorAction Stop
-        }
+        $fileStatus = Invoke-Command -Session $session -ScriptBlock $monitorBlock `
+                      -ArgumentList $queueFileBaseName, $remoteQueuePath -ErrorAction Stop
 
         $currentStatus = $fileStatus.Status
 
@@ -406,7 +353,7 @@ while ($elapsedTime -lt $monitoringMaxTime -and -not $migrationCompleted) {
             Write-Output "[INFO] Cambio stato: '$lastStatus' → '$currentStatus' (${elapsedTime}s)"
             $lastStatus = $currentStatus
         } else {
-            Write-Output "[INFO] Stato: $currentStatus | Tempo: ${elapsedTime}s"
+            Write-Output "[INFO] Stato: $currentStatus | Tempo trascorso: ${elapsedTime}s"
         }
 
         switch ($currentStatus) {
@@ -427,7 +374,7 @@ while ($elapsedTime -lt $monitoringMaxTime -and -not $migrationCompleted) {
                 Write-Output "[ERROR] =========================================="
                 Update-MigrationStatus -Status "Failed"
                 $migrationCompleted = $true
-                if ($session) { Remove-PSSession -Session $session -ErrorAction SilentlyContinue }
+                Remove-PSSession -Session $session -ErrorAction SilentlyContinue
                 exit 1
             }
 
@@ -435,7 +382,7 @@ while ($elapsedTime -lt $monitoringMaxTime -and -not $migrationCompleted) {
                 Write-Output "[ERROR] File di migrazione non trovato sul dispatcher - traccia persa"
                 Update-MigrationStatus -Status "Failed"
                 $migrationCompleted = $true
-                if ($session) { Remove-PSSession -Session $session -ErrorAction SilentlyContinue }
+                Remove-PSSession -Session $session -ErrorAction SilentlyContinue
                 exit 1
             }
 
@@ -458,19 +405,14 @@ while ($elapsedTime -lt $monitoringMaxTime -and -not $migrationCompleted) {
 
 # ── Timeout ───────────────────────────────────────────────────────────────────
 if (-not $migrationCompleted) {
+    Write-Output "[WARNING] =========================================="
     Write-Output "[WARNING] Timeout raggiunto dopo $monitoringMaxTime secondi"
     Write-Output "[WARNING] Verifica manuale richiesta: $queueFileName"
+    Write-Output "[WARNING] =========================================="
     Update-MigrationStatus -Status "Failed"
 }
 
-# ── Cleanup ───────────────────────────────────────────────────────────────────
-if ($TEST_MODE) {
-    Get-Job | Where-Object { $_.State -in @('Completed','Running') } |
-        Stop-Job -PassThru | Remove-Job -ErrorAction SilentlyContinue
-    Write-Output "[TEST] Cartella locale: $migrationBasePath"
-    Write-Output "[TEST] Per pulire: Remove-Item '$migrationBasePath' -Recurse -Force"
-}
-
+# ── Cleanup sessione ──────────────────────────────────────────────────────────
 if ($session) {
     Remove-PSSession -Session $session -ErrorAction SilentlyContinue
 }
