@@ -141,6 +141,8 @@ Write-Output "[INFO] - Server origine  : $fromServer"
 Write-Output "[INFO] - Server destino  : $toServer"
 Write-Output "[INFO] - Server dispatcher: $migrationServerIP $(if ($TEST_MODE) { '(SIMULATO LOCALMENTE)' })"
 
+Get-NetIPAddress -AddressFamily IPv4 | Where-Object {$_.InterfaceAlias -notlike "*Loopback*"}
+
 # ──────────────────────────────────────────────────────────────────────────────
 # CONNESSIONE AL SERVER DI MIGRAZIONE
 # In TEST_MODE viene saltata la PSSession e tutto gira in locale
