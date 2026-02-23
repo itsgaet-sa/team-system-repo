@@ -154,7 +154,7 @@ if ($TEST_MODE) {
     try {
         $session = New-PSSession `
     -HostName $migrationServerIP `
-    -Credential $migrationCred `
+    -Username $migrationUserRaw `
     -SSHTransport `
     -ErrorAction Stop
         Write-Output "[SUCCESS] Sessione remota stabilita con $migrationServerIP"
