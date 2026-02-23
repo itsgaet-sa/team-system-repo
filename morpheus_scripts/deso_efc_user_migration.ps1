@@ -141,9 +141,6 @@ Write-Output "[INFO] - Server origine  : $fromServer"
 Write-Output "[INFO] - Server destino  : $toServer"
 Write-Output "[INFO] - Server dispatcher: $migrationServerIP $(if ($TEST_MODE) { '(SIMULATO LOCALMENTE)' })"
 
-ip a
-ifconfig
-
 
 
 # ──────────────────────────────────────────────────────────────────────────────
