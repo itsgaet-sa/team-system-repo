@@ -126,62 +126,16 @@ Write-Output "[INFO] - Dispatcher      : $migrationServerIP"
 Write-Output "[INFO] =========================================="
 
 # ──────────────────────────────────────────────────────────────────────────────
-# REGISTRAZIONE CHIAVE HOST (eseguita solo se non già presente nel known_hosts)
-# ──────────────────────────────────────────────────────────────────────────────
-try {
-    $currentUser   = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-    $sshDir        = if ($env:USERPROFILE) {
-                         Join-Path $env:USERPROFILE ".ssh"
-                     } else {
-                         # Fallback per SYSTEM / service account senza USERPROFILE
-                         "C:\Windows\System32\config\systemprofile\.ssh"
-                     }
-    $knownHostsFile = Join-Path $sshDir "known_hosts"
-
-    Write-Output "[INFO] Utente corrente   : $currentUser"
-    Write-Output "[INFO] File known_hosts  : $knownHostsFile"
-
-    # Crea la directory .ssh se non esiste
-    if (-not (Test-Path $sshDir)) {
-        New-Item -Path $sshDir -ItemType Directory -Force | Out-Null
-        Write-Output "[INFO] Directory .ssh creata: $sshDir"
-    }
-
-    # Controlla se la chiave per questo host è già registrata
-    $alreadyKnown = $false
-    if (Test-Path $knownHostsFile) {
-        $alreadyKnown = (Get-Content $knownHostsFile -Raw) -match [regex]::Escape($migrationServerIP)
-    }
-
-    if ($alreadyKnown) {
-        Write-Output "[INFO] Chiave host di $migrationServerIP già presente nel known_hosts - Skip"
-    } else {
-        Write-Output "[INFO] Recupero chiave host di $migrationServerIP tramite ssh-keyscan..."
-        $scannedKey = ssh-keyscan -H $migrationServerIP 2>$null
-        if ($scannedKey) {
-            Add-Content -Path $knownHostsFile -Value $scannedKey -Force
-            Write-Output "[SUCCESS] Chiave host registrata nel known_hosts"
-        } else {
-            Write-Output "[ERROR] ssh-keyscan non ha restituito risultati per $migrationServerIP"
-            Update-MigrationStatus -Status "Failed"
-            exit 1
-        }
-    }
-} catch {
-    Write-Output "[ERROR] Errore durante la registrazione della chiave host: $($_.Exception.Message)"
-    Update-MigrationStatus -Status "Failed"
-    exit 1
-}
-
-# ──────────────────────────────────────────────────────────────────────────────
 # CONNESSIONE SSH AL DISPATCHER
 # ──────────────────────────────────────────────────────────────────────────────
 $session     = $null
 $tempKeyPath = $null
 
 # ── DA RIMUOVERE DOPO LA PRIMA ESECUZIONE ────────────────────────────────────
-ssh-keyscan -H $migrationServerIP 2>$null >> "$env:USERPROFILE\.ssh\known_hosts"
-Write-Output "[INFO] Chiave host registrata nel known_hosts"
+$knownHostsFile = Join-Path $HOME ".ssh" "known_hosts"
+if (-not (Test-Path (Split-Path $knownHostsFile))) { New-Item -Path (Split-Path $knownHostsFile) -ItemType Directory -Force | Out-Null }
+ssh-keyscan -H $migrationServerIP 2>$null >> $knownHostsFile
+Write-Output "[INFO] Chiave host registrata: $knownHostsFile"
 # ─────────────────────────────────────────────────────────────────────────────
 
 Write-Output "[INFO] Connessione SSH al dispatcher ($migrationServerIP)..."
