@@ -74,9 +74,8 @@ $instanceId      = "<%=instance.id%>"
 # ── Credenziali (FAKE - in produzione vengono dal Cypher di Morpheus) ─────────
 # PRODUZIONE:
 #$migrationUserRaw = '<%=cypher.read("secret/EFC-TS_MIG_DANEA-USR",true)%>'
-#$migrationUserRaw = 'ts_mig_danea@ad.easyfattincloud.it'
-$migrationUserRaw = 'ts_mig_danea'
-$migrationPassRaw = '<%=cypher.read("secret/EFC-TS_MIG_DANEA-PWD",true)%>'
+$migrationUserRaw = 'ts_mig_danea@ad.easyfattincloud.it'
+$migrationPassRaw = '<%=cypher.read("secret/EFC-TS_MIG_DANEA_SSH",true)%>'
 #$migrationUserRaw = "testuser"
 #$migrationPassRaw = "testpassword"
 
@@ -154,9 +153,12 @@ if ($TEST_MODE) {
     Write-Output "[INFO] Connessione al server dispatcher ($migrationServerIP) in corso..."
     $session = $null
     try {
+    $tempKeyPath = "$env:TEMP\temp_ssh_key"
+    Set-Content -Path $tempKeyPath -Value $migrationPassRaw -NoNewline
         $session = New-PSSession `
     -HostName $migrationServerIP `
     -Username $migrationUserRaw `
+    -KeyFilePath $tempKeyPath `
     -SSHTransport `
     -ErrorAction Stop
         Write-Output "[SUCCESS] Sessione remota stabilita con $migrationServerIP"
