@@ -127,16 +127,25 @@ Write-Output "[INFO] =========================================="
 $tempKeyPath = $null
 
 try {
-    $keyBytes    = [System.Convert]::FromBase64String($migrationKeyBase64.Trim())
-    $keyPem      = [System.Text.Encoding]::UTF8.GetString($keyBytes)
     $tempKeyPath = "/tmp/ssh_key_$([System.Guid]::NewGuid().ToString('N'))"
+    $keyRaw      = $migrationKeyBase64.Trim()
+
+    # Prova a decodificare come Base64, se fallisce usa la stringa così com'è (PEM grezzo)
+    try {
+        $keyBytes = [System.Convert]::FromBase64String($keyRaw)
+        $keyPem   = [System.Text.Encoding]::UTF8.GetString($keyBytes)
+        Write-Output "[INFO] Chiave SSH letta dal Cypher come Base64"
+    } catch {
+        $keyPem = $keyRaw
+        Write-Output "[INFO] Chiave SSH letta dal Cypher come PEM grezzo"
+    }
 
     Set-Content -Path $tempKeyPath -Value $keyPem -NoNewline -Encoding UTF8
     chmod 600 $tempKeyPath
 
-    Write-Output "[INFO] Chiave SSH decodificata e pronta"
+    Write-Output "[INFO] Chiave SSH pronta"
 } catch {
-    Write-Output "[ERROR] Errore decodifica chiave SSH dal Cypher: $($_.Exception.Message)"
+    Write-Output "[ERROR] Errore preparazione chiave SSH: $($_.Exception.Message)"
     Update-MigrationStatus -Status "Failed"
     exit 1
 }
