@@ -1,5 +1,5 @@
 # Autore: G.ABBATICCHIO
-# Revisione: 2.0
+# Revisione: 2.1
 # Data: 23/02/2026
 # Code: deso_efc_user_migration
 # Source: repo
@@ -9,8 +9,8 @@
 # Visibility: Public
 # Continue on error: False
 # Retryable: False
-# Description: Preparazione per la migrazione dell'utente, creazione del file dichiarativo,
-#              avvio dispatcher e monitoraggio stato su Morpheus.
+# Description: Preparazione per la migrazione dell'utente, creazione del file dichiarativo
+#              e monitoraggio stato su Morpheus in base ai file sul dispatcher.
 #              La chiave SSH deve essere salvata nel Cypher EFC-TS_MIG_DANEA_SSH
 #              come stringa Base64 (ottenibile con: base64 -i chiave | tr -d '\n')
 
@@ -60,7 +60,7 @@ function Update-MigrationStatus {
 # PARAMETRI MORPHEUS
 # ──────────────────────────────────────────────────────────────────────────────
 $migrationValue = "<%=customOptions.migrateData%>"
-$migrationValue = "true"
+$migrationValue = "true"   # TODO: rimuovere forzatura se non più necessaria
 $fromUser       = "<%=customOptions.fromUser%>"
 $fromServer     = "<%=customOptions.fromServer%>"
 $toServer       = "<%=instance.containers[0].server.internalIp%>"
@@ -79,7 +79,7 @@ $migrationKeyBase64 = '<%=cypher.read("secret/EFC-TS_MIG_DANEA_SSH",true)%>'
 # ──────────────────────────────────────────────────────────────────────────────
 $migrationServerIP = "10.182.1.11"
 $remoteQueuePath   = "D:\tools\migration-tool-st\incoming"
-$remoteDispatcher  = "D:\tools\migration-tool-st\dispatcher.ps1"
+$remoteDispatcher  = "D:\tools\migration-tool-st\dispatcher.ps1"  # non più usato, lasciato solo a riferimento
 
 # ──────────────────────────────────────────────────────────────────────────────
 # INIZIO SCRIPT
@@ -289,49 +289,11 @@ try {
 $queueFileName     = $result.FileName
 $queueFileBaseName = [System.IO.Path]::GetFileNameWithoutExtension($queueFileName)
 
-# File in coda → stato Pending
+# File in coda → stato Pending (file .txt appena creato)
 Update-MigrationStatus -Status "Pending"
 
 # ──────────────────────────────────────────────────────────────────────────────
-# BLOCCO REMOTO: AVVIO DISPATCHER
-# ──────────────────────────────────────────────────────────────────────────────
-Write-Output "[INFO] Avvio dispatcher sul server remoto..."
-
-$dispatcherBlock = {
-    param($dispatcherScript)
-    if (-not (Test-Path $dispatcherScript)) {
-        throw "Script dispatcher non trovato: $dispatcherScript"
-    }
-    Write-Output "[REMOTE][INFO] Avvio: $dispatcherScript"
-    try {
-        pwsh $dispatcherScript
-        Write-Output "[REMOTE][SUCCESS] Dispatcher eseguito correttamente"
-    } catch {
-        throw "Errore durante l'esecuzione del dispatcher: $($_.Exception.Message)"
-    }
-    return [PSCustomObject]@{ Status = "Success" }
-}
-
-try {
-    $dispRaw = Invoke-Command -Session $session -ScriptBlock $dispatcherBlock `
-               -ArgumentList $remoteDispatcher -ErrorAction Stop
-
-    Write-RemoteLog -RemoteOutput ($dispRaw | Where-Object { $_ -is [string] })
-
-    $dispResult = $dispRaw | Where-Object { $_ -isnot [string] } | Select-Object -Last 1
-
-    if ($dispResult -and $dispResult.Status -eq "Success") {
-        Write-Output "[SUCCESS] Dispatcher avviato correttamente"
-    } else {
-        Write-Output "[WARNING] Dispatcher avviato ma senza conferma esplicita - la migrazione rimarrà in coda"
-    }
-} catch {
-    Write-Output "[WARNING] Errore avvio dispatcher: $($_.Exception.Message)"
-    Write-Output "[WARNING] La migrazione resterà in coda fino al prossimo avvio del dispatcher"
-}
-
-# ──────────────────────────────────────────────────────────────────────────────
-# MONITORAGGIO STATO MIGRAZIONE
+# MONITORAGGIO STATO MIGRAZIONE (senza avvio dispatcher)
 # ──────────────────────────────────────────────────────────────────────────────
 Write-Output "[INFO] =========================================="
 Write-Output "[INFO] Monitoraggio migrazione in corso..."
@@ -408,8 +370,18 @@ while ($elapsedTime -lt $monitoringMaxTime -and -not $migrationCompleted) {
                 exit 1
             }
 
+            "Scheduled" {
+                # File .txt presente → in coda, quindi Pending
+                Update-MigrationStatus -Status "Pending"
+            }
+
+            "Processing" {
+                # File .work presente → in lavorazione, quindi sempre Pending lato Morpheus
+                Update-MigrationStatus -Status "Pending"
+            }
+
             default {
-                # Scheduled / Processing: attesa normale
+                # Nessuna azione aggiuntiva
             }
         }
 
