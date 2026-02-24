@@ -311,7 +311,7 @@ $lastStatus         = ""
 $monitorBlock = {
     param($baseName, $qPath)
     $doneFile = Join-Path $qPath "$baseName.done"
-    $errFile  = Join-Path $qPath "$baseName.err"
+    $errFile  = Join-Path $qPath "$baseName.fail"
     $workFile = Join-Path $qPath "$baseName.txt.work"
     $txtFile  = Join-Path $qPath "$baseName.txt"
 
