@@ -1,6 +1,6 @@
 # Autore: G.ABBATICCHIO
-# Revisione: 2.1
-# Data: 23/02/2026
+# Revisione: 2.2
+# Data: 24/02/2026
 # Code: deso_efc_user_migration
 # Source: repo
 # Result Type: none
@@ -77,9 +77,11 @@ $migrationKeyBase64 = '<%=cypher.read("secret/EFC-TS_MIG_DANEA_SSH",true)%>'
 # ──────────────────────────────────────────────────────────────────────────────
 # PATH REMOTI SUL DISPATCHER
 # ──────────────────────────────────────────────────────────────────────────────
-$migrationServerIP = "10.182.1.11"
-$remoteQueuePath   = "D:\tools\migration-tool-st\incoming"
-$remoteDispatcher  = "D:\tools\migration-tool-st\dispatcher.ps1"  # non più usato, lasciato solo a riferimento
+$migrationServerIP   = "10.182.1.11"
+$remoteQueuePath     = "D:\tools\migration-tool-st\incoming"
+$remoteDispatcher    = "D:\tools\migration-tool-st\dispatcher.ps1"  # non più usato, riferimento storico
+$dispatcherTaskName  = "dispatcher-st"
+$dispatcherTaskPath  = "\"   # root dello Scheduler
 
 # ──────────────────────────────────────────────────────────────────────────────
 # INIZIO SCRIPT
@@ -122,8 +124,6 @@ Write-Output "[INFO] =========================================="
 
 # ──────────────────────────────────────────────────────────────────────────────
 # DECODIFICA CHIAVE SSH DA BASE64
-# La chiave viene salvata nel Cypher come Base64 per preservare i newline.
-# Per generarla: base64 -i ~/.ssh/ts_mig_danea | tr -d '\n'
 # ──────────────────────────────────────────────────────────────────────────────
 $tempKeyPath = $null
 
@@ -293,7 +293,63 @@ $queueFileBaseName = [System.IO.Path]::GetFileNameWithoutExtension($queueFileNam
 Update-MigrationStatus -Status "Pending"
 
 # ──────────────────────────────────────────────────────────────────────────────
-# MONITORAGGIO STATO MIGRAZIONE (senza avvio dispatcher)
+# AVVIO DEL TASK SCHEDULATO SUL DISPATCHER (dispatcher-st)
+# ──────────────────────────────────────────────────────────────────────────────
+Write-Output "[INFO] Avvio dispatcher (Scheduled Task '$dispatcherTaskName')..."
+
+$startTaskBlock = {
+    param($taskName, $taskPath)
+
+    try {
+        Start-ScheduledTask -TaskName $taskName -TaskPath $taskPath -ErrorAction Stop
+        Write-Output "[REMOTE][INFO] Task '$taskPath$taskName' avviato"
+
+        $info = Get-ScheduledTaskInfo -TaskName $taskName -TaskPath $taskPath -ErrorAction SilentlyContinue
+        if ($info) {
+            Write-Output ("[REMOTE][INFO] Ultima esecuzione: {0} | Ultimo risultato: {1}" -f `
+                $info.LastRunTime, $info.LastTaskResult)
+        }
+
+        return [PSCustomObject]@{
+            Status = "Started"
+        }
+    }
+    catch {
+        Write-Output "[REMOTE][ERROR] Errore avvio task '$taskPath$taskName': $($_.Exception.Message)"
+        return [PSCustomObject]@{
+            Status = "Failed"
+            Error  = $_.Exception.Message
+        }
+    }
+}
+
+try {
+    $taskRaw = Invoke-Command -Session $session -ScriptBlock $startTaskBlock `
+               -ArgumentList $dispatcherTaskName, $dispatcherTaskPath `
+               -ErrorAction Stop
+
+    Write-RemoteLog -RemoteOutput ($taskRaw | Where-Object { $_ -is [string] })
+
+    $taskStatus = $taskRaw | Where-Object { $_ -isnot [string] } | Select-Object -Last 1
+
+    if (-not $taskStatus -or $taskStatus.Status -ne "Started") {
+        Write-Output "[ERROR] Il task '$dispatcherTaskName' non risulta avviato correttamente"
+        Update-MigrationStatus -Status "Failed"
+        Remove-PSSession -Session $session -ErrorAction SilentlyContinue
+        exit 1
+    }
+
+    Write-Output "[SUCCESS] Task '$dispatcherTaskName' avviato sul dispatcher"
+
+} catch {
+    Write-Output "[ERROR] Impossibile avviare il task '$dispatcherTaskName': $($_.Exception.Message)"
+    Update-MigrationStatus -Status "Failed"
+    Remove-PSSession -Session $session -ErrorAction SilentlyContinue
+    exit 1
+}
+
+# ──────────────────────────────────────────────────────────────────────────────
+# MONITORAGGIO STATO MIGRAZIONE
 # ──────────────────────────────────────────────────────────────────────────────
 Write-Output "[INFO] =========================================="
 Write-Output "[INFO] Monitoraggio migrazione in corso..."
