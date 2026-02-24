@@ -353,16 +353,16 @@ $monitorBlock = {
     $txtFile  = Join-Path $qPath "$baseName.txt"
 
     if     (Test-Path $doneFile) {
-        return [PSCustomObject]@{ Status = "Completed";  FilePath = $doneFile; ErrorMessage = $null }
+        return [PSCustomObject]@{ Status = "completed";  FilePath = $doneFile; ErrorMessage = $null }
     } elseif (Test-Path $errFile) {
         $errMsg = Get-Content $errFile -Raw -ErrorAction SilentlyContinue
-        return [PSCustomObject]@{ Status = "Failed";     FilePath = $errFile;  ErrorMessage = $errMsg }
+        return [PSCustomObject]@{ Status = "failed";     FilePath = $errFile;  ErrorMessage = $errMsg }
     } elseif (Test-Path $workFile) {
-        return [PSCustomObject]@{ Status = "Processing"; FilePath = $workFile; ErrorMessage = $null }
+        return [PSCustomObject]@{ Status = "running"; FilePath = $workFile; ErrorMessage = $null }
     } elseif (Test-Path $txtFile) {
-        return [PSCustomObject]@{ Status = "Scheduled";  FilePath = $txtFile;  ErrorMessage = $null }
+        return [PSCustomObject]@{ Status = "running";  FilePath = $txtFile;  ErrorMessage = $null }
     } else {
-        return [PSCustomObject]@{ Status = "Unknown";    FilePath = $null;     ErrorMessage = $null }
+        return [PSCustomObject]@{ Status = "failed";    FilePath = $null;     ErrorMessage = $null }
     }
 }
 
