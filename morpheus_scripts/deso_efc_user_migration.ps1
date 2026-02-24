@@ -1,6 +1,6 @@
 # Autore: G.ABBATICCHIO
-# Revisione: 2.1
-# Data: 23/02/2026
+# Revisione: 2.2
+# Data: 24/02/2026
 # Code: deso_efc_user_migration
 # Source: repo
 # Result Type: none
@@ -136,7 +136,6 @@ try {
         $keyBytes = [System.Convert]::FromBase64String($keyRaw)
         $keyPem   = [System.Text.Encoding]::UTF8.GetString($keyBytes)
         Write-Output "[INFO] Chiave SSH letta dal Cypher come Base64"
-        # dopo il blocco dove fai FromBase64String / GetString
         $keyFirstLine = $keyPem -split "`n" | Select-Object -First 1
         Write-Output "[DEBUG] Prima riga chiave: $keyFirstLine"
     } catch {
@@ -289,6 +288,45 @@ try {
     exit 1
 }
 
+# ──────────────────────────────────────────────────────────────────────────────
+# AVVIO TASK SCHEDULATO DEL DISPATCHER
+# ──────────────────────────────────────────────────────────────────────────────
+$startDispatcherTaskBlock = {
+    param(
+        [string]$taskName,
+        [string]$taskPath
+    )
+
+    Write-Output "[REMOTE][INFO] Avvio task schedulato '$taskName' (Path: '$taskPath')..."
+
+    try {
+        Start-ScheduledTask -TaskName $taskName -TaskPath $taskPath -ErrorAction Stop
+        Write-Output "[REMOTE][SUCCESS] Task '$taskName' avviato correttamente"
+    }
+    catch {
+        Write-Output "[REMOTE][ERROR] Impossibile avviare il task '$taskName': $($_.Exception.Message)"
+        throw
+    }
+}
+
+Write-Output "[INFO] Avvio task schedulato del dispatcher..."
+
+try {
+    $taskName = "dispatcher-st"
+    $taskPath = "\"  # come da proprietà del task (Percorso: \)
+
+    $taskOutput = Invoke-Command -Session $session -ScriptBlock $startDispatcherTaskBlock `
+                   -ArgumentList $taskName, $taskPath -ErrorAction Stop
+
+    Write-RemoteLog -RemoteOutput $taskOutput
+}
+catch {
+    Write-Output "[ERROR] Errore durante l'avvio del task schedulato sul dispatcher: $($_.Exception.Message)"
+    Update-MigrationStatus -Status "Failed"
+    Remove-PSSession -Session $session -ErrorAction SilentlyContinue
+    exit 1
+}
+
 $queueFileName     = $result.FileName
 $queueFileBaseName = [System.IO.Path]::GetFileNameWithoutExtension($queueFileName)
 
@@ -296,7 +334,7 @@ $queueFileBaseName = [System.IO.Path]::GetFileNameWithoutExtension($queueFileNam
 Update-MigrationStatus -Status "Pending"
 
 # ──────────────────────────────────────────────────────────────────────────────
-# MONITORAGGIO STATO MIGRAZIONE (senza avvio dispatcher)
+# MONITORAGGIO STATO MIGRAZIONE
 # ──────────────────────────────────────────────────────────────────────────────
 Write-Output "[INFO] =========================================="
 Write-Output "[INFO] Monitoraggio migrazione in corso..."
