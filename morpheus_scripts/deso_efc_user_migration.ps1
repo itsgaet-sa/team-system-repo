@@ -42,8 +42,10 @@ function Update-MigrationStatus {
         }
         $body = @{
             instance = @{
-                customOptions = @{
-                    MigrationStatus = $Status
+                config = @{
+                    customOptions = @{
+                        MigrationStatus = $Status
+                    }
                 }
             }
         } | ConvertTo-Json -Depth 10
