@@ -60,7 +60,6 @@ function Update-MigrationStatus {
 # PARAMETRI MORPHEUS
 # ──────────────────────────────────────────────────────────────────────────────
 $migrationValue = "<%=customOptions.migrateData%>"
-$migrationValue = "true"   # TODO: rimuovere forzatura se non più necessaria
 $fromUser       = "<%=customOptions.fromUser%>"
 $fromServer     = "<%=customOptions.fromServer%>"
 $toServer       = "<%=instance.containers[0].server.internalIp%>"
