@@ -29,7 +29,7 @@ function Write-RemoteLog {
 
 function Update-MigrationStatus {
     param(
-        [ValidateSet("Pending", "Completed", "Failed")]
+        [ValidateSet("running", "completed", "failed")]
         [string]$Status
     )
     try {
@@ -95,7 +95,7 @@ if ($migrationValue -ne "true") {
 # ── Validazione credenziali ───────────────────────────────────────────────────
 if ([string]::IsNullOrWhiteSpace($migrationUserRaw) -or [string]::IsNullOrWhiteSpace($migrationKeyBase64)) {
     Write-Output "[ERROR] Credenziali migrazione non disponibili dal Cypher (user o chiave vuoti)"
-    Update-MigrationStatus -Status "Failed"
+    Update-MigrationStatus -Status "failed"
     exit 1
 }
 
@@ -107,7 +107,7 @@ if ([string]::IsNullOrWhiteSpace($toServer))   { $validationErrors += "toServer 
 
 if ($validationErrors.Count -gt 0) {
     foreach ($e in $validationErrors) { Write-Output "[ERROR] $e" }
-    Update-MigrationStatus -Status "Failed"
+    Update-MigrationStatus -Status "failed"
     exit 1
 }
 
@@ -148,7 +148,7 @@ try {
     Write-Output "[INFO] Chiave SSH pronta"
 } catch {
     Write-Output "[ERROR] Errore preparazione chiave SSH: $($_.Exception.Message)"
-    Update-MigrationStatus -Status "Failed"
+    Update-MigrationStatus -Status "failed"
     exit 1
 }
 
@@ -169,7 +169,7 @@ try {
     Write-Output "[SUCCESS] Sessione SSH stabilita con $migrationServerIP"
 } catch {
     Write-Output "[ERROR] Impossibile connettersi al dispatcher: $($_.Exception.Message)"
-    Update-MigrationStatus -Status "Failed"
+    Update-MigrationStatus -Status "failed"
     exit 1
 } finally {
     # Chiave rimossa dal disco subito dopo l'apertura della sessione
@@ -273,7 +273,7 @@ try {
 
     if (-not $result -or $result.Status -ne "Success") {
         Write-Output "[ERROR] Il blocco remoto non ha restituito un risultato valido"
-        Update-MigrationStatus -Status "Failed"
+        Update-MigrationStatus -Status "failed"
         Remove-PSSession -Session $session -ErrorAction SilentlyContinue
         exit 1
     }
@@ -282,7 +282,7 @@ try {
 
 } catch {
     Write-Output "[ERROR] Errore durante la creazione del file di coda: $($_.Exception.Message)"
-    Update-MigrationStatus -Status "Failed"
+    Update-MigrationStatus -Status "failed"
     Remove-PSSession -Session $session -ErrorAction SilentlyContinue
     exit 1
 }
@@ -321,7 +321,7 @@ try {
 }
 catch {
     Write-Output "[ERROR] Errore durante l'avvio del task schedulato sul dispatcher: $($_.Exception.Message)"
-    Update-MigrationStatus -Status "Failed"
+    Update-MigrationStatus -Status "failed"
     Remove-PSSession -Session $session -ErrorAction SilentlyContinue
     exit 1
 }
@@ -330,7 +330,7 @@ $queueFileName     = $result.FileName
 $queueFileBaseName = [System.IO.Path]::GetFileNameWithoutExtension($queueFileName)
 
 # File in coda → stato Pending (file .txt appena creato)
-Update-MigrationStatus -Status "Pending"
+Update-MigrationStatus -Status "running"
 
 # ──────────────────────────────────────────────────────────────────────────────
 # MONITORAGGIO STATO MIGRAZIONE
@@ -386,7 +386,7 @@ while ($elapsedTime -lt $monitoringMaxTime -and -not $migrationCompleted) {
                 Write-Output "[SUCCESS] =========================================="
                 Write-Output "[SUCCESS] Migrazione completata con successo!"
                 Write-Output "[SUCCESS] =========================================="
-                Update-MigrationStatus -Status "Completed"
+                Update-MigrationStatus -Status "completed"
                 $migrationCompleted = $true
             }
 
@@ -396,7 +396,7 @@ while ($elapsedTime -lt $monitoringMaxTime -and -not $migrationCompleted) {
                 Write-Output "[ERROR] Migrazione fallita!"
                 Write-Output "[ERROR] Dettaglio: $errorMsg"
                 Write-Output "[ERROR] =========================================="
-                Update-MigrationStatus -Status "Failed"
+                Update-MigrationStatus -Status "failed"
                 $migrationCompleted = $true
                 Remove-PSSession -Session $session -ErrorAction SilentlyContinue
                 exit 1
@@ -404,7 +404,7 @@ while ($elapsedTime -lt $monitoringMaxTime -and -not $migrationCompleted) {
 
             "Unknown" {
                 Write-Output "[ERROR] File di migrazione non trovato sul dispatcher - traccia persa"
-                Update-MigrationStatus -Status "Failed"
+                Update-MigrationStatus -Status "failed"
                 $migrationCompleted = $true
                 Remove-PSSession -Session $session -ErrorAction SilentlyContinue
                 exit 1
@@ -412,12 +412,12 @@ while ($elapsedTime -lt $monitoringMaxTime -and -not $migrationCompleted) {
 
             "Scheduled" {
                 # File .txt presente → in coda, quindi Pending
-                Update-MigrationStatus -Status "Pending"
+                Update-MigrationStatus -Status "running"
             }
 
             "Processing" {
                 # File .work presente → in lavorazione, quindi sempre Pending lato Morpheus
-                Update-MigrationStatus -Status "Pending"
+                Update-MigrationStatus -Status "running"
             }
 
             default {
@@ -443,7 +443,7 @@ if (-not $migrationCompleted) {
     Write-Output "[WARNING] Timeout raggiunto dopo $monitoringMaxTime secondi"
     Write-Output "[WARNING] Verifica manuale richiesta: $queueFileName"
     Write-Output "[WARNING] =========================================="
-    Update-MigrationStatus -Status "Failed"
+    Update-MigrationStatus -Status "failed"
 }
 
 # ── Cleanup sessione ──────────────────────────────────────────────────────────
