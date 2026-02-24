@@ -136,6 +136,9 @@ try {
         $keyBytes = [System.Convert]::FromBase64String($keyRaw)
         $keyPem   = [System.Text.Encoding]::UTF8.GetString($keyBytes)
         Write-Output "[INFO] Chiave SSH letta dal Cypher come Base64"
+        # dopo il blocco dove fai FromBase64String / GetString
+        $keyFirstLine = $keyPem -split "`n" | Select-Object -First 1
+        Write-Output "[DEBUG] Prima riga chiave: $keyFirstLine"
     } catch {
         $keyPem = $keyRaw
         Write-Output "[INFO] Chiave SSH letta dal Cypher come PEM grezzo"
