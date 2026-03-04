@@ -226,7 +226,7 @@ $createQueueBlock = {
     try {
         # Calcolo prossima sequenza
         $existingFiles = Get-ChildItem -Path $queuePath -ErrorAction SilentlyContinue |
-        Where-Object { $_.Name -match '^migra-(\d+)\.(txt|done|txt\.work)$' } |
+        Where-Object { $_.Name -match '^migra-(\d+)\.(txt|done|fail|txt\.work)$' } |
         ForEach-Object {
             if ($_.Name -match '^migra-(\d+)') {
                 [int]$Matches[1]
