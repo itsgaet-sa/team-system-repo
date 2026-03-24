@@ -155,6 +155,36 @@ try {
 }
 
 # ──────────────────────────────────────────────────────────────────────────────
+# VALIDAZIONE HOST KEY
+# ──────────────────────────────────────────────────────────────────────────────
+Write-Output "[INFO] Validazione Host key ($migrationServerIP)..."
+
+$sshDir = Join-Path $HOME ".ssh"
+if (!(Test-Path $sshDir)) {
+    New-Item -ItemType Directory -Path $sshDir -Force | Out-Null
+}
+
+$knownHosts = Join-Path $sshDir "known_hosts"
+
+# Rimuove eventuali chiavi vecchie
+ssh-keygen -R $migrationServerIP 2>$null
+
+# Recupera nuova host key
+$keyScan = ssh-keyscan -H $migrationServerIP 2>$null
+
+if ([string]::IsNullOrWhiteSpace($keyScan)) {
+    Write-Output "[ERROR] Impossibile recuperare host key da $migrationServerIP"
+    exit 1
+}
+
+$keyScan | Out-File -Append -FilePath $knownHosts -Encoding ascii
+
+chmod 700 $sshDir
+chmod 600 $knownHosts
+
+Write-Output "[INFO] Host key registrata correttamente"
+
+# ──────────────────────────────────────────────────────────────────────────────
 # CONNESSIONE SSH AL DISPATCHER
 # ──────────────────────────────────────────────────────────────────────────────
 $session = $null
