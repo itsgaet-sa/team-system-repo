@@ -107,7 +107,7 @@ function Update-MigrationCustomOptions {
                     # quindi NON viene modificato
 
                     # Reset stato migrazione
-                    MigrationStatus = $null
+                    MigrationStatus = "test"
                 }
             }
         }
