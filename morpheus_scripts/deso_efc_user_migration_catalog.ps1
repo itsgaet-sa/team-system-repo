@@ -1,4 +1,3 @@
-
 # Autore: G.ABBATICCHIO
 # Revisione: 0.1
 # Data: 11/05/2026
@@ -10,8 +9,9 @@
 # Visibility: Public
 # Continue on error: False
 # Retryable: False
-# Description: Fase diagnostica Catalog Item - stampa valori ricevuti da GUI
-#              e valori già presenti sull'istanza, senza eseguire migrazione.
+# Description: Fase diagnostica Catalog Item - stampa valori già presenti
+#              sull'istanza e poi valori ricevuti da GUI,
+#              senza eseguire migrazione.
 
 $ErrorActionPreference = "Stop"
 $ProgressPreference    = "SilentlyContinue"
@@ -19,6 +19,7 @@ $ProgressPreference    = "SilentlyContinue"
 # ──────────────────────────────────────────────────────────────────────────────
 # FUNZIONI DI SUPPORTO
 # ──────────────────────────────────────────────────────────────────────────────
+
 function Write-Section {
     param([string]$Title)
 
@@ -79,8 +80,8 @@ $catalog_toServer    = "<%=customOptions.toServer%>"
 # ──────────────────────────────────────────────────────────────────────────────
 # Questi sono i valori attualmente associati all'istanza Morpheus.
 
-$instanceId      = "<%=instance.id%>"
-$instanceName    = "<%=instance.name%>"
+$instanceId       = "<%=instance.id%>"
+$instanceName     = "<%=instance.name%>"
 $instanceToServer = "<%=instance.containers[0].server.internalIp%>"
 
 $instance_MigrateData     = "<%=instance.config.customOptions.MigrateData%>"
@@ -105,13 +106,6 @@ Write-Value -Label "Instance ID"   -Value $instanceId
 Write-Value -Label "Instance Name" -Value $instanceName
 Write-Value -Label "Internal IP"   -Value $instanceToServer
 
-Write-Section "VALORI INSERITI DA INTERFACCIA GRAFICA / CATALOG ITEM"
-
-Write-Value -Label "Catalog MigrateData" -Value $catalog_MigrateData
-Write-Value -Label "Catalog fromUser"    -Value $catalog_fromUser
-Write-Value -Label "Catalog fromServer"  -Value $catalog_fromServer
-Write-Value -Label "Catalog toServer"    -Value $catalog_toServer
-
 Write-Section "VALORI GIÀ PRESENTI SULL'ISTANZA"
 
 Write-Value -Label "Instance MigrateData"     -Value $instance_MigrateData
@@ -120,7 +114,14 @@ Write-Value -Label "Instance fromServer"      -Value $instance_fromServer
 Write-Value -Label "Instance toServer"        -Value $instanceToServer
 Write-Value -Label "Instance MigrationStatus" -Value $instance_MigrationStatus
 
-Write-Section "CONFRONTO VALORI CATALOG ITEM VS ISTANZA"
+Write-Section "VALORI INSERITI DA INTERFACCIA GRAFICA / CATALOG ITEM"
+
+Write-Value -Label "Catalog MigrateData" -Value $catalog_MigrateData
+Write-Value -Label "Catalog fromUser"    -Value $catalog_fromUser
+Write-Value -Label "Catalog fromServer"  -Value $catalog_fromServer
+Write-Value -Label "Catalog toServer"    -Value $catalog_toServer
+
+Write-Section "CONFRONTO VALORI ISTANZA VS CATALOG ITEM"
 
 Write-Compare -Label "MigrateData" -OldValue $instance_MigrateData -NewValue $catalog_MigrateData
 Write-Compare -Label "fromUser"    -OldValue $instance_fromUser    -NewValue $catalog_fromUser
