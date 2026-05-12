@@ -1,7 +1,7 @@
 # Autore: G.ABBATICCHIO
-# Revisione: 0.4
+# Revisione: 0.3
 # Data: 12/05/2026
-# Code: deso_efc_user_migration_catalog_update_debug
+# Code: deso_efc_user_migration_catalog_debug
 # Source: repo
 # Result Type: none
 # Elevated Shell: True
@@ -9,30 +9,25 @@
 # Visibility: Public
 # Continue on error: False
 # Retryable: False
-# Description:
-#   Aggiorna customOptions Morpheus da Catalog Item:
-#   - MigrateData sempre true
-#   - fromUser da Catalog Item
-#   - fromServer da Catalog Item
-#   - toServer NON modificato
-#   - MigrationStatus a null
-#   Poi rilegge l'istanza via API e stampa i valori effettivi.
+# Description: Aggiorna customOptions Morpheus da Catalog Item:
+#              - MigrateData sempre true
+#              - fromUser da Catalog Item
+#              - fromServer da Catalog Item
+#              - toServer non modificato
+#              - MigrationStatus a null
+#              e stampa diagnostica valori istanza/catalog.
 
 $ErrorActionPreference = "Stop"
 $ProgressPreference    = "SilentlyContinue"
 
 # ──────────────────────────────────────────────────────────────────────────────
-# FUNZIONI LOG
+# FUNZIONI DI SUPPORTO LOG
 # ──────────────────────────────────────────────────────────────────────────────
 
 function Format-Value {
-    param($Value)
+    param([string]$Value)
 
-    if ($null -eq $Value) {
-        return "<null>"
-    }
-
-    if ([string]::IsNullOrWhiteSpace([string]$Value)) {
+    if ([string]::IsNullOrWhiteSpace($Value)) {
         return "<vuoto/non valorizzato>"
     }
 
@@ -42,115 +37,102 @@ function Format-Value {
 function Write-Line {
     param(
         [string]$Label,
-        $Value
+        [string]$Value
     )
 
     Write-Output "[INFO] $Label = $(Format-Value $Value)"
 }
 
-function Write-Section {
-    param([string]$Title)
-
-    Write-Output ""
-    Write-Output "[INFO] =========================================="
-    Write-Output "[INFO] $Title"
-    Write-Output "[INFO] =========================================="
-}
-
-# ──────────────────────────────────────────────────────────────────────────────
-# FUNZIONE API - GET ISTANZA
-# ──────────────────────────────────────────────────────────────────────────────
-
-function Get-MorpheusInstance {
+function Write-Compare {
     param(
-        [string]$InstanceId,
-        [string]$ApiUrl,
-        [hashtable]$Headers
+        [string]$Label,
+        [string]$InstanceValue,
+        [string]$CatalogValue
     )
 
-    $url = "$ApiUrl/api/instances/$InstanceId"
+    $instancePrintable = Format-Value $InstanceValue
+    $catalogPrintable  = Format-Value $CatalogValue
 
-    return Invoke-RestMethod `
-        -Uri $url `
-        -Method Get `
-        -Headers $Headers `
-        -ErrorAction Stop
+    if ($InstanceValue -eq $CatalogValue) {
+        Write-Output "[INFO] $Label = invariato | istanza=$instancePrintable | catalog=$catalogPrintable"
+    }
+    else {
+        Write-Output "[INFO] $Label = diverso   | istanza=$instancePrintable | catalog=$catalogPrintable"
+    }
 }
 
 # ──────────────────────────────────────────────────────────────────────────────
-# FUNZIONE API - UPDATE CUSTOM OPTIONS
+# FUNZIONE UPDATE MORPHEUS
 # ──────────────────────────────────────────────────────────────────────────────
 
 function Update-MigrationCustomOptions {
-    param(
-        [string]$InstanceId,
-        [string]$ApiUrl,
-        [hashtable]$Headers,
-        [string]$CatalogFromUser,
-        [string]$CatalogFromServer
-    )
+    try {
+        $instanceId     = "<%=instance.id%>"
+        $morpheusApiUrl = "<%=morpheus.applianceUrl%>/api/instances/$instanceId"
+        $morpheusToken  = "<%=morpheus.apiAccessToken%>"
 
-    $url = "$ApiUrl/api/instances/$InstanceId"
+        $catalog_fromUser   = "<%=customOptions.fromUser%>"
+        $catalog_fromServer = "<%=customOptions.fromServer%>"
 
-    $body = @{
-        instance = @{
-            config = @{
-                customOptions = @{
-                    # Sempre forzato a true
-                    MigrateData = $true
+        $headers = @{
+            "Authorization" = "Bearer $morpheusToken"
+            "Content-Type"  = "application/json"
+        }
 
-                    # Valori ricevuti dal Catalog Item
-                    fromUser   = $CatalogFromUser
-                    fromServer = $CatalogFromServer
+        $body = @{
+            instance = @{
+                config = @{
+                    customOptions = @{
+                        # Sempre forzato a true
+                        MigrateData = $true
 
-                    # toServer NON viene inviato
-                    # quindi NON viene modificato
+                        # Valori presi dal Catalog Item
+                        fromUser   = $catalog_fromUser
+                        fromServer = $catalog_fromServer
 
-                    # Reset stato migrazione
-                    MigrationStatus = "test"
+                        # toServer NON viene incluso nel body
+                        # quindi non viene modificato
+
+                        # Reset stato migrazione
+                        MigrationStatus = $null
+                    }
                 }
             }
-        }
-    } | ConvertTo-Json -Depth 20
+        } | ConvertTo-Json -Depth 10
 
-    Write-Section "BODY INVIATO A MORPHEUS"
-    Write-Output $body
+        Invoke-RestMethod `
+            -Uri $morpheusApiUrl `
+            -Method Put `
+            -Headers $headers `
+            -Body $body `
+            -ErrorAction Stop | Out-Null
 
-    Invoke-RestMethod `
-        -Uri $url `
-        -Method Put `
-        -Headers $Headers `
-        -Body $body `
-        -ErrorAction Stop | Out-Null
-
-    Write-Output "[INFO] PUT eseguita correttamente su Morpheus"
+        Write-Output "[INFO] CustomOptions aggiornate correttamente su Morpheus"
+        Write-Output "[INFO] MigrateData     -> true"
+        Write-Output "[INFO] fromUser        -> '$catalog_fromUser'"
+        Write-Output "[INFO] fromServer      -> '$catalog_fromServer'"
+        Write-Output "[INFO] toServer        -> NON MODIFICATO"
+        Write-Output "[INFO] MigrationStatus -> null"
+    }
+    catch {
+        Write-Output "[WARNING] Impossibile aggiornare le customOptions in Morpheus: $($_.Exception.Message)"
+    }
 }
 
 # ──────────────────────────────────────────────────────────────────────────────
-# VARIABILI MORPHEUS
+# VALORI RICEVUTI DAL CATALOG ITEM / GUI
 # ──────────────────────────────────────────────────────────────────────────────
 
-$instanceId = "<%=instance.id%>"
-$apiUrl     = "<%=morpheus.applianceUrl%>"
-$token      = "<%=morpheus.apiAccessToken%>"
-
-$headers = @{
-    "Authorization" = "Bearer $token"
-    "Content-Type"  = "application/json"
-    "Accept"        = "application/json"
-}
+$catalog_MigrateData = "<%=customOptions.MigrateData%>"
+$catalog_fromUser    = "<%=customOptions.fromUser%>"
+$catalog_fromServer  = "<%=customOptions.fromServer%>"
+$catalog_toServer    = "<%=customOptions.toServer%>"
 
 # ──────────────────────────────────────────────────────────────────────────────
-# VALORI DA CATALOG ITEM
+# VALORI GIÀ PRESENTI SULL'ISTANZA
 # ──────────────────────────────────────────────────────────────────────────────
 
-$catalog_fromUser   = "<%=customOptions.fromUser%>"
-$catalog_fromServer = "<%=customOptions.fromServer%>"
-
-# ──────────────────────────────────────────────────────────────────────────────
-# VALORI ATTUALI TEMPLATE MORPHEUS
-# ──────────────────────────────────────────────────────────────────────────────
-
+$instanceId       = "<%=instance.id%>"
 $instanceName     = "<%=instance.name%>"
 $instanceToServer = "<%=instance.containers[0].server.internalIp%>"
 
@@ -160,72 +142,48 @@ $instance_fromServer      = "<%=instance.config.customOptions.fromServer%>"
 $instance_MigrationStatus = "<%=instance.config.customOptions.MigrationStatus%>"
 
 # ──────────────────────────────────────────────────────────────────────────────
-# LOG PRIMA UPDATE
+# LOG DIAGNOSTICO PRIMA DELL'UPDATE
 # ──────────────────────────────────────────────────────────────────────────────
 
-Write-Section "START UPDATE CUSTOMOPTIONS MIGRAZIONE"
+Write-Output "[INFO] ===== START UPDATE CUSTOMOPTIONS MIGRAZIONE ====="
 
+Write-Output ""
+Write-Output "[INFO] ----- CONTESTO ISTANZA -----"
 Write-Line -Label "Instance ID"   -Value $instanceId
 Write-Line -Label "Instance Name" -Value $instanceName
 Write-Line -Label "Internal IP"   -Value $instanceToServer
 
-Write-Section "VALORI ISTANZA PRIMA DELL'UPDATE - TEMPLATE"
-
+Write-Output ""
+Write-Output "[INFO] ----- VALORI ATTUALI ISTANZA -----"
 Write-Line -Label "Instance MigrateData"     -Value $instance_MigrateData
 Write-Line -Label "Instance fromUser"        -Value $instance_fromUser
 Write-Line -Label "Instance fromServer"      -Value $instance_fromServer
 Write-Line -Label "Instance toServer"        -Value $instanceToServer
 Write-Line -Label "Instance MigrationStatus" -Value $instance_MigrationStatus
 
-Write-Section "VALORI RICEVUTI DAL CATALOG ITEM"
+Write-Output ""
+Write-Output "[INFO] ----- VALORI RICEVUTI DAL CATALOG ITEM -----"
+Write-Line -Label "Catalog MigrateData" -Value $catalog_MigrateData
+Write-Line -Label "Catalog fromUser"    -Value $catalog_fromUser
+Write-Line -Label "Catalog fromServer"  -Value $catalog_fromServer
+Write-Line -Label "Catalog toServer"    -Value $catalog_toServer
 
-Write-Line -Label "Catalog fromUser"   -Value $catalog_fromUser
-Write-Line -Label "Catalog fromServer" -Value $catalog_fromServer
-
-# ──────────────────────────────────────────────────────────────────────────────
-# UPDATE
-# ──────────────────────────────────────────────────────────────────────────────
-
-Write-Section "UPDATE CUSTOMOPTIONS MORPHEUS"
-
-Update-MigrationCustomOptions `
-    -InstanceId $instanceId `
-    -ApiUrl $apiUrl `
-    -Headers $headers `
-    -CatalogFromUser $catalog_fromUser `
-    -CatalogFromServer $catalog_fromServer
+Write-Output ""
+Write-Output "[INFO] ----- CONFRONTO PRIMA DELL'UPDATE -----"
+Write-Compare -Label "MigrateData" -InstanceValue $instance_MigrateData -CatalogValue $catalog_MigrateData
+Write-Compare -Label "fromUser"    -InstanceValue $instance_fromUser    -CatalogValue $catalog_fromUser
+Write-Compare -Label "fromServer"  -InstanceValue $instance_fromServer  -CatalogValue $catalog_fromServer
+Write-Compare -Label "toServer"    -InstanceValue $instanceToServer     -CatalogValue $catalog_toServer
 
 # ──────────────────────────────────────────────────────────────────────────────
-# VERIFICA POST UPDATE VIA API
+# UPDATE CUSTOMOPTIONS
 # ──────────────────────────────────────────────────────────────────────────────
 
-Write-Section "VERIFICA POST UPDATE - LETTURA DA API MORPHEUS"
+Write-Output ""
+Write-Output "[INFO] ----- UPDATE CUSTOMOPTIONS MORPHEUS -----"
 
-try {
-    Start-Sleep -Seconds 2
+Update-MigrationCustomOptions
 
-    $updatedInstance = Get-MorpheusInstance `
-        -InstanceId $instanceId `
-        -ApiUrl $apiUrl `
-        -Headers $headers
-
-    $updatedCustomOptions = $updatedInstance.instance.config.customOptions
-
-    Write-Line -Label "API MigrateData"     -Value $updatedCustomOptions.MigrateData
-    Write-Line -Label "API fromUser"        -Value $updatedCustomOptions.fromUser
-    Write-Line -Label "API fromServer"      -Value $updatedCustomOptions.fromServer
-    Write-Line -Label "API toServer"        -Value $updatedCustomOptions.toServer
-    Write-Line -Label "API MigrationStatus" -Value $updatedCustomOptions.MigrationStatus
-
-    Write-Output ""
-    Write-Output "[INFO] Nota: se questi valori risultano aggiornati qui ma non compaiono nella UI,"
-    Write-Output "[INFO] allora Morpheus li ha salvati nel backend ma non li mostra in Runtime > Inputs."
-}
-catch {
-    Write-Output "[WARNING] Update eseguito, ma verifica GET fallita: $($_.Exception.Message)"
-}
-
-Write-Section "FINE"
-
-Write-Output "[SUCCESS] Script completato"
+Write-Output ""
+Write-Output "[SUCCESS] Update customOptions completato"
 exit 0
