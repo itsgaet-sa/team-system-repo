@@ -74,6 +74,15 @@ function Update-MigrationCustomOptions {
         $catalog_fromUser   = "<%=customOptions.fromUser%>"
         $catalog_fromServer = "<%=customOptions.fromServer%>"
 
+        $catalog_MigrateNow = "<%=customOptions.MigrateNow%>"
+
+        if ([string]::IsNullOrWhiteSpace($catalog_MigrateNow)) {
+            $catalog_MigrateNow = "true"
+        }
+        
+        $catalog_MigrateNow = $catalog_MigrateNow.Trim().ToLowerInvariant()
+        $migrateNowBool     = ($catalog_MigrateNow -ne "false")
+
         $headers = @{
             "Authorization" = "Bearer $morpheusToken"
             "Content-Type"  = "application/json"
@@ -89,6 +98,8 @@ function Update-MigrationCustomOptions {
                         # Valori presi dal Catalog Item
                         fromUser   = $catalog_fromUser
                         fromServer = $catalog_fromServer
+
+                        MigrateNow = $migrateNowBool
 
                         # toServer NON viene incluso nel body
                         # quindi non viene modificato
