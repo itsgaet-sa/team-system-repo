@@ -29,7 +29,7 @@ function Write-RemoteLog {
 
 function Update-MigrationStatus {
     param(
-        [ValidateSet("running", "completed", "failed")]
+        [ValidateSet("running", "completed", "failed","scheduled")]
         [string]$Status
     )
     try {
