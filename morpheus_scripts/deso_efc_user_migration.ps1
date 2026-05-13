@@ -79,7 +79,25 @@ $migrationKeyBase64 = '<%=cypher.read("secret/EFC-TS_MIG_DANEA_SSH",true)%>'
 # PATH REMOTI SUL DISPATCHER
 # ──────────────────────────────────────────────────────────────────────────────
 $migrationServerIP = "10.182.1.11"
-$remoteQueuePath   = "D:\tools\migration-tool-st\incoming"
+
+$migrateNow = "<%=customOptions.migrateNow%>"
+
+if ([string]::IsNullOrWhiteSpace($migrateNow)) {
+    $migrateNow = "true"
+}
+
+$remoteIncomingPath          = "D:\tools\migration-tool-st\incoming"
+$remoteIncomingScheduledPath = "D:\tools\migration-tool-st\incoming-scheduled"
+$remoteQueuePath = ""
+
+if ($migrateNow -eq "false") {
+    $remoteQueuePath = $remoteIncomingScheduledPath
+    Write-Output "[INFO] migrateNow   : '$migrateNow' → migrazione schedulata"
+} else {
+    $remoteQueuePath = $remoteIncomingPath
+    Write-Output "[INFO] migrateNow   : '$migrateNow' → migrazione immediata"
+}
+
 $remoteDispatcher  = "D:\tools\migration-tool-st\dispatcher.ps1"  # non più usato, lasciato solo a riferimento
 
 # ──────────────────────────────────────────────────────────────────────────────
