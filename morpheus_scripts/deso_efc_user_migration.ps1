@@ -80,7 +80,7 @@ $migrationKeyBase64 = '<%=cypher.read("secret/EFC-TS_MIG_DANEA_SSH",true)%>'
 # ──────────────────────────────────────────────────────────────────────────────
 $migrationServerIP = "10.182.1.11"
 
-$migrateNow = "<%=customOptions.migrateNow%>"
+$migrateNow = "<%=customOptions.MigrateNow%>"
 
 if ([string]::IsNullOrWhiteSpace($migrateNow)) {
     $migrateNow = "true"
@@ -344,6 +344,8 @@ try {
 # ──────────────────────────────────────────────────────────────────────────────
 # AVVIO TASK SCHEDULATO DEL DISPATCHER
 # ──────────────────────────────────────────────────────────────────────────────
+
+if ($migrateNow -eq "true") {
 $startDispatcherTaskBlock = {
     param(
         [string]$taskName,
@@ -491,6 +493,7 @@ while ($elapsedTime -lt $monitoringMaxTime -and -not $migrationCompleted) {
     }
 }
 
+
 # ── Timeout ───────────────────────────────────────────────────────────────────
 if (-not $migrationCompleted) {
     Write-Output "[WARNING] =========================================="
@@ -498,6 +501,10 @@ if (-not $migrationCompleted) {
     Write-Output "[WARNING] Verifica manuale richiesta: $queueFileName"
     Write-Output "[WARNING] =========================================="
     Update-MigrationStatus -Status "failed"
+}
+
+}else{
+    Update-MigrationStatus -Status "scheduled"
 }
 
 # ── Cleanup sessione ──────────────────────────────────────────────────────────
