@@ -47,7 +47,6 @@ $catalog_migrationType     = "<%=customOptions.migrationType%>"
 $catalog_sourceServer      = "<%=customOptions.sourceServer%>"
 $catalog_destinationServer = "<%=customOptions.destinationServer%>"
 $catalog_targetUser        = "<%=customOptions.targetUser%>"
-$catalog_migrationMode     = "<%=customOptions.migrationMode%>"
 
 # ──────────────────────────────────────────────────────────────────────────────
 # LOG DIAGNOSTICO SOLO CATALOG ITEM
@@ -61,7 +60,6 @@ Write-Line -Label "Catalog migrationType"     -Value $catalog_migrationType
 Write-Line -Label "Catalog sourceServer"      -Value $catalog_sourceServer
 Write-Line -Label "Catalog destinationServer" -Value $catalog_destinationServer
 Write-Line -Label "Catalog targetUser"        -Value $catalog_targetUser
-Write-Line -Label "Catalog migrationMode"     -Value $catalog_migrationMode
 
 Write-Output ""
 Write-Output "[SUCCESS] Debug Catalog Item completato"
