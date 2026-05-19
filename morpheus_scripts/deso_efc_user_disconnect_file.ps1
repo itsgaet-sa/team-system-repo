@@ -108,7 +108,7 @@ if ([string]::IsNullOrWhiteSpace($migrationUserRaw) -or [string]::IsNullOrWhiteS
 # ──────────────────────────────────────────────────────────────────────────────
 
 $migrationServerIP  = "10.182.1.11"
-$remoteIncomingPath = "D:\tools\migration-tool-st\incoming"
+$remoteIncomingPath = "D:\tools\migration-tool-st"
 $remoteUsersFile    = "users.txt"
 $remoteLockFile     = "users.lock"
 
