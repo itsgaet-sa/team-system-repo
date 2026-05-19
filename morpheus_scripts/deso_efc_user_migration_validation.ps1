@@ -149,7 +149,8 @@ function Invoke-MorpheusGetInstance {
 
     $headers = @{
         "Authorization" = "BEARER $AccessToken"
-        "Accept"        = "application/json"
+        "Content-Type"  = "application/json"
+
     }
 
     try {
@@ -258,7 +259,6 @@ $catalog_targetUser        = $catalog_targetUser.Trim()
 $catalog_instanceId        = $catalog_instanceId.Trim()
 
 $morpheus_applianceUrl = $morpheus_applianceUrl.Trim()
-$morpheus_accessToken  = $morpheus_accessToken.Trim()
 
 $validationErrors = @()
 
