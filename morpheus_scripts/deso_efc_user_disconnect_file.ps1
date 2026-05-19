@@ -49,12 +49,9 @@ function To-BoolString {
 
 $needMigrationRaw = "<%=customOptions.needMigration%>"
 $userToMigrate    = "<%=customOptions.userToMigrate%>"
-<<<<<<< HEAD
-$instanceId     = "<%=instance.id%>"
-=======
+
 $instanceId     = "<%=instance.id%>"
 $thresholdHour = 18
->>>>>>> 3b2ca2002bcfd0c93fffc8434db4be3c607eb4e5
 
 $needMigration = To-BoolString $needMigrationRaw
 
@@ -264,10 +261,6 @@ $appendUserBlock = {
     }
 
     try {
-<<<<<<< HEAD
-        $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-        $line      = "$userToMigrate,$timestamp,$instanceId"
-=======
         
         $now = Get-Date
         
@@ -277,7 +270,6 @@ $appendUserBlock = {
         else {
             $timestamp = $now.AddDays(1).ToString("yyyy-MM-dd")
         }
->>>>>>> 3b2ca2002bcfd0c93fffc8434db4be3c607eb4e5
 
         $line      = "$userToMigrate,$timestamp,$instanceId"
 
