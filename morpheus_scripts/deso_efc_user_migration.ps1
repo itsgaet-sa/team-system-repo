@@ -137,7 +137,7 @@ $migrationKeyBase64 = '<%=cypher.read("secret/EFC-TS_MIG_DANEA_SSH",true)%>'
 $migrationServerIP = "10.182.1.11"
 
 $remoteIncomingPath          = "D:\tools\migration-tool-st\incoming"
-$remoteIncomingScheduledPath = "D:\tools\migration-tool-st\incoming-scheduled"
+$remoteIncomingScheduledPath = "D:\tools\migration-tool-st-planned\incoming"
 $remoteQueuePath             = ""
 
 if ($migrateNow -eq "false") {
