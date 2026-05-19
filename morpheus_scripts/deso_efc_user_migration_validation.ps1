@@ -1,5 +1,5 @@
 # Autore: G.ABBATICCHIO
-# Revisione: 0.2
+# Revisione: 0.3
 # Data: 19/05/2026
 # Code: deso_efc_user_migration_validation
 # Source: repo
@@ -10,8 +10,8 @@
 # Continue on error: False
 # Retryable: False
 # Description: Valida i valori ricevuti dal Catalog Item.
-#              Verifica inoltre che instanceId, se valorizzato/richiesto,
-#              sia presente su Morpheus e riferito a una instance deployata.
+#              Verifica inoltre che instanceId, se richiesto,
+#              sia presente e leggibile su Morpheus.
 #              Nessun aggiornamento customOptions su Morpheus.
 
 $ErrorActionPreference = "Stop"
@@ -46,6 +46,10 @@ function Add-ValidationError {
     $script:validationErrors += $Message
     Write-Output "[ERROR] $Message"
 }
+
+# ──────────────────────────────────────────────────────────────────────────────
+# FUNZIONI DI VALIDAZIONE BASE
+# ──────────────────────────────────────────────────────────────────────────────
 
 function Test-Required {
     param(
@@ -135,6 +139,10 @@ function Test-Username {
     return $true
 }
 
+# ──────────────────────────────────────────────────────────────────────────────
+# FUNZIONI MORPHEUS API
+# ──────────────────────────────────────────────────────────────────────────────
+
 function Invoke-MorpheusGetInstance {
     param(
         [string]$InstanceId,
@@ -145,48 +153,65 @@ function Invoke-MorpheusGetInstance {
     $baseUrl = $ApplianceUrl.TrimEnd("/")
     $uri     = "$baseUrl/api/instances/$InstanceId"
 
-    Write-Output "[INFO] Verifica presenza instanceId su Morpheus tramite GET /api/instances/$InstanceId"
+    Write-Output "[INFO] Verifica instanceId su Morpheus"
+    Write-Output "[INFO] API URL: $uri"
 
     $headers = @{
-        "Authorization" = "BEARER $AccessToken"
+        "Authorization" = "Bearer $AccessToken"
         "Content-Type"  = "application/json"
-
+        "Accept"        = "application/json"
     }
 
     try {
         $response = Invoke-RestMethod `
-            -Method Get `
             -Uri $uri `
+            -Method Get `
             -Headers $headers `
-            -ContentType "application/json"
+            -ErrorAction Stop
 
         return $response
     }
     catch {
         $statusCode = $null
+        $errorBody  = $null
 
-        if ($_.Exception.Response -and $_.Exception.Response.StatusCode) {
-            $statusCode = [int]$_.Exception.Response.StatusCode
+        try {
+            if ($_.Exception.Response) {
+                $statusCode = [int]$_.Exception.Response.StatusCode
+
+                $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
+                $errorBody = $reader.ReadToEnd()
+            }
+        }
+        catch {
+            $errorBody = $null
         }
 
         if ($statusCode -eq 404) {
-            Add-ValidationError "instanceId $(Format-Value $InstanceId) non presente su Morpheus"
+            Add-ValidationError "instanceId $(Format-Value $InstanceId) non esiste su Morpheus"
         }
-        elseif ($statusCode -eq 401 -or $statusCode -eq 403) {
-            Add-ValidationError "Impossibile verificare instanceId $(Format-Value $InstanceId): token Morpheus non autorizzato. HTTP $statusCode"
+        elseif ($statusCode -eq 401) {
+            Add-ValidationError "Errore autenticazione Morpheus durante verifica instanceId $(Format-Value $InstanceId). HTTP 401"
+        }
+        elseif ($statusCode -eq 403) {
+            Add-ValidationError "Token Morpheus non autorizzato a leggere instanceId $(Format-Value $InstanceId). HTTP 403"
         }
         elseif ($statusCode) {
-            Add-ValidationError "Errore durante verifica instanceId $(Format-Value $InstanceId) su Morpheus. HTTP $statusCode"
+            Add-ValidationError "Errore HTTP durante verifica instanceId $(Format-Value $InstanceId) su Morpheus. HTTP $statusCode"
         }
         else {
             Add-ValidationError "Errore durante verifica instanceId $(Format-Value $InstanceId) su Morpheus: $($_.Exception.Message)"
+        }
+
+        if (-not [string]::IsNullOrWhiteSpace($errorBody)) {
+            Write-Output "[ERROR] Morpheus response body: $errorBody"
         }
 
         return $null
     }
 }
 
-function Test-MorpheusInstanceDeployed {
+function Test-MorpheusInstanceExists {
     param(
         [string]$InstanceId,
         [object]$ApiResponse
@@ -203,34 +228,20 @@ function Test-MorpheusInstanceDeployed {
 
     $instance = $ApiResponse.instance
 
+    if ([string]::IsNullOrWhiteSpace([string]$instance.id)) {
+        Add-ValidationError "Risposta Morpheus non valida: instance.id non presente per instanceId $(Format-Value $InstanceId)"
+        return $false
+    }
+
     if ([string]$instance.id -ne [string]$InstanceId) {
         Add-ValidationError "instanceId restituito da Morpheus non coincide. Richiesto: $(Format-Value $InstanceId), ricevuto: $(Format-Value ([string]$instance.id))"
         return $false
     }
 
-    $instanceName   = [string]$instance.name
-    $instanceStatus = [string]$instance.status
-
+    Write-Output "[SUCCESS] instanceId presente su Morpheus"
     Write-Line -Label "Morpheus instance.id"     -Value ([string]$instance.id)
-    Write-Line -Label "Morpheus instance.name"   -Value $instanceName
-    Write-Line -Label "Morpheus instance.status" -Value $instanceStatus
-
-    # Stati considerati validi per una instance effettivamente deployata.
-    # Se nel vostro ambiente Morpheus usate altri stati validi, aggiungerli qui.
-    $allowedDeployedStatuses = @(
-        "running",
-        "stopped"
-    )
-
-    if ([string]::IsNullOrWhiteSpace($instanceStatus)) {
-        Add-ValidationError "instanceId $(Format-Value $InstanceId) presente su Morpheus ma senza status valorizzato"
-        return $false
-    }
-
-    if ($allowedDeployedStatuses -notcontains $instanceStatus.ToLower()) {
-        Add-ValidationError "instanceId $(Format-Value $InstanceId) presente su Morpheus ma non in stato deployato valido. Status ricevuto: $(Format-Value $instanceStatus). Stati ammessi: $($allowedDeployedStatuses -join ', ')"
-        return $false
-    }
+    Write-Line -Label "Morpheus instance.name"   -Value ([string]$instance.name)
+    Write-Line -Label "Morpheus instance.status" -Value ([string]$instance.status)
 
     return $true
 }
@@ -246,7 +257,8 @@ $catalog_destinationServer = "<%=customOptions.destinationServer%>"
 $catalog_targetUser        = "<%=customOptions.targetUser%>"
 $catalog_instanceId        = "<%=customOptions.instanceId%>"
 
-# Valori Morpheus per chiamata API
+# Valori Morpheus per chiamata API.
+# Questi placeholder sono quelli normalmente usati nei task Morpheus.
 $morpheus_applianceUrl = "<%=morpheus.applianceUrl%>"
 $morpheus_accessToken  = "<%=morpheus.apiAccessToken%>"
 
@@ -259,6 +271,7 @@ $catalog_targetUser        = $catalog_targetUser.Trim()
 $catalog_instanceId        = $catalog_instanceId.Trim()
 
 $morpheus_applianceUrl = $morpheus_applianceUrl.Trim()
+$morpheus_accessToken  = $morpheus_accessToken.Trim()
 
 $validationErrors = @()
 
@@ -388,7 +401,7 @@ else {
 
 # ──────────────────────────────────────────────────────────────────────────────
 # CHECK MORPHEUS INSTANCE
-# Verifica che instanceId sia presente e deployato su Morpheus
+# Verifica che instanceId sia presente e leggibile su Morpheus
 # ──────────────────────────────────────────────────────────────────────────────
 
 Write-Output ""
@@ -413,7 +426,7 @@ if ($instanceIdIsValidForApiCheck) {
             -ApplianceUrl $morpheus_applianceUrl `
             -AccessToken $morpheus_accessToken
 
-        Test-MorpheusInstanceDeployed `
+        Test-MorpheusInstanceExists `
             -InstanceId $catalog_instanceId `
             -ApiResponse $instanceResponse | Out-Null
     }
