@@ -50,6 +50,7 @@ function To-BoolString {
 $needMigrationRaw = "<%=customOptions.needMigration%>"
 $userToMigrate    = "<%=customOptions.userToMigrate%>"
 $instanceId     = "<%=instance.id%>"
+$thresholdHour = 11
 
 $needMigration = To-BoolString $needMigrationRaw
 
@@ -259,7 +260,16 @@ $appendUserBlock = {
     }
 
     try {
-        $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+        
+        $now = Get-Date
+        
+        if ($now.Hour -lt $thresholdHour) {
+            $timestamp = $now.ToString("yyyy-MM-dd")
+        }
+        else {
+            $timestamp = $now.AddDays(1).ToString("yyyy-MM-dd")
+        }
+
         $line      = "$userToMigrate,$timestamp,$instanceId"
 
         Add-Content -Path $usersFilePath -Value $line -Encoding UTF8 -ErrorAction Stop
