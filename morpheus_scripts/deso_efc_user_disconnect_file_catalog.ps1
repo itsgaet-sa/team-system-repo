@@ -182,7 +182,7 @@ $migrationUserRaw = $migrationUserRaw.Trim()
 # ──────────────────────────────────────────────────────────────────────────────
 
 $migrationServerIP  = "10.182.1.11"
-$remoteIncomingPath = "D:\tools\migration-tool-st"
+$remoteIncomingPath = "D:\tools\migration-tool-st-planned"
 $remoteUsersFile    = "users.txt"
 $remoteLockFile     = "users.lock"
 
