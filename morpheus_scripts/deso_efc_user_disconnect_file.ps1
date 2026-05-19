@@ -49,6 +49,7 @@ function To-BoolString {
 
 $needMigrationRaw = "<%=customOptions.needMigration%>"
 $userToMigrate    = "<%=customOptions.userToMigrate%>"
+$instanceId     = "<%=instance.id%>"
 
 $needMigration = To-BoolString $needMigrationRaw
 
@@ -57,6 +58,7 @@ Write-Output "[INFO] ACCODAMENTO UTENTE PER DISCONNESSIONE"
 Write-Output "[INFO] =========================================="
 Write-Output "[INFO] needMigration : '$needMigration'"
 Write-Output "[INFO] userToMigrate : '$userToMigrate'"
+Write-Output "[INFO] instanceId     : '$instanceId'"
 
 # ──────────────────────────────────────────────────────────────────────────────
 # SE needMigration NON È true, NON FARE NULLA
@@ -78,6 +80,12 @@ if ([string]::IsNullOrWhiteSpace($userToMigrate)) {
 }
 
 $userToMigrate = $userToMigrate.Trim()
+
+if ([string]::IsNullOrWhiteSpace($instanceId)) {
+    Write-Output "[WARNING] Parametro instanceId mancante o vuoto"
+}
+
+$instanceId = $instanceId.Trim()
 
 # ──────────────────────────────────────────────────────────────────────────────
 # CREDENZIALI DA CYPHER
@@ -202,9 +210,11 @@ finally {
 $appendUserBlock = {
     param(
         [string]$userToMigrate,
+        [string]$instanceId,
         [string]$queuePath,
         [string]$usersFileName,
         [string]$lockFileName
+        
     )
 
     $usersFilePath = Join-Path $queuePath $usersFileName
@@ -250,7 +260,7 @@ $appendUserBlock = {
 
     try {
         $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-        $line      = "$userToMigrate,$timestamp"
+        $line      = "$userToMigrate,$timestamp,$instanceId"
 
         Add-Content -Path $usersFilePath -Value $line -Encoding UTF8 -ErrorAction Stop
 
@@ -288,7 +298,7 @@ Write-Output "[INFO] Accodamento utente su users.txt..."
 
 try {
     $rawOutput = Invoke-Command -Session $session -ScriptBlock $appendUserBlock `
-        -ArgumentList $userToMigrate, $remoteIncomingPath, $remoteUsersFile, $remoteLockFile `
+        -ArgumentList $userToMigrate, $instanceId, $remoteIncomingPath, $remoteUsersFile, $remoteLockFile `
         -ErrorAction Stop
 
     Write-RemoteLog -RemoteOutput ($rawOutput | Where-Object { $_ -is [string] })
