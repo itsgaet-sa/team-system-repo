@@ -50,7 +50,7 @@ function To-BoolString {
 $needMigrationRaw = "<%=customOptions.needMigration%>"
 $userToMigrate    = "<%=customOptions.userToMigrate%>"
 $instanceId     = "<%=instance.id%>"
-$thresholdHour = 11
+$thresholdHour = 18
 
 $needMigration = To-BoolString $needMigrationRaw
 
